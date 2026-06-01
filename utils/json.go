@@ -2,10 +2,10 @@ package utils
 
 import "encoding/json"
 
-func JsonToBytes(d interface{}) (bytes []byte, err error) {
-	switch d.(type) {
+func JsonToBytes(d any) (bytes []byte, err error) {
+	switch t := d.(type) {
 	case []byte:
-		return d.([]byte), nil
+		return t, nil
 	default:
 		return json.Marshal(d)
 	}
