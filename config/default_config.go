@@ -2,7 +2,7 @@ package config
 
 var DefaultConfigYaml = `
 info:
-  version: v0.6.3
+  version: v0.6.1
   edition: global.edition.community
 mongo:
   host: localhost
@@ -33,8 +33,4 @@ fs:
     authKey: Crawlab2021!
 node:
   master: Y
-api:
-  endpoint: http://localhost:8000
-log:
-  path: /var/log/crawlab
 `

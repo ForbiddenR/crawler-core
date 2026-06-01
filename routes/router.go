@@ -100,14 +100,14 @@ func registerRoutesAnonymousGroup(svc *RouterService, groups *RouterGroups) {
 	// version
 	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/version", controllers.VersionController)
 
+	// i18n
+	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/i18n", controllers.I18nController)
+
 	// system info
 	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/system-info", controllers.SystemInfoController)
 
 	// demo
 	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/demo", controllers.DemoController)
-
-	// sync
-	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/sync", controllers.SyncController)
 }
 
 func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
@@ -132,6 +132,12 @@ func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
 	// setting
 	svc.RegisterListControllerToGroup(groups.AuthGroup, "/settings", controllers.SettingController)
 
+	// color
+	svc.RegisterActionControllerToGroup(groups.AuthGroup, "/colors", controllers.ColorController)
+
+	// plugin
+	svc.RegisterListActionControllerToGroup(groups.AuthGroup, "/plugins", controllers.PluginController)
+
 	// data collection
 	svc.RegisterListControllerToGroup(groups.AuthGroup, "/data/collections", controllers.DataCollectionController)
 
@@ -147,6 +153,9 @@ func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
 	// token
 	svc.RegisterListControllerToGroup(groups.AuthGroup, "/tokens", controllers.TokenController)
 
+	// plugin do
+	svc.RegisterActionControllerToGroup(groups.AuthGroup, "/plugin-proxy", controllers.PluginProxyController)
+
 	// git
 	svc.RegisterListControllerToGroup(groups.AuthGroup, "/gits", controllers.GitController)
 
@@ -158,6 +167,9 @@ func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
 
 	// export
 	svc.RegisterActionControllerToGroup(groups.AuthGroup, "/export", controllers.ExportController)
+
+	// env deps
+	svc.RegisterActionControllerToGroup(groups.AuthGroup, "/env/deps", controllers.EnvDepsController)
 
 	// notification
 	svc.RegisterActionControllerToGroup(groups.AuthGroup, "/notifications", controllers.NotificationController)

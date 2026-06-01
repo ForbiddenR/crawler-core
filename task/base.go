@@ -2,8 +2,8 @@ package task
 
 import (
 	"fmt"
+	"github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
-	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/service"
@@ -11,6 +11,7 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/dig"
 )
 
 type BaseService struct {
@@ -86,7 +87,14 @@ func NewBaseService() (svc2 interfaces.TaskBaseService, err error) {
 	svc := &BaseService{}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(cfgPath interfaces.WithConfigPath, modelSvc service.ModelService) {
+	c := dig.New()
+	if err := c.Provide(config.NewConfigPathService); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	if err := c.Provide(service.NewService); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	if err := c.Invoke(func(cfgPath interfaces.WithConfigPath, modelSvc service.ModelService) {
 		svc.WithConfigPath = cfgPath
 		svc.modelSvc = modelSvc
 	}); err != nil {

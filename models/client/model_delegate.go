@@ -44,6 +44,8 @@ func NewModelDelegate(doc interfaces.Model, opts ...ModelDelegateOption) interfa
 		return newModelDelegate(interfaces.ModelIdTaskQueue, doc, opts...)
 	case *models.TaskStat:
 		return newModelDelegate(interfaces.ModelIdTaskStat, doc, opts...)
+	case *models.Plugin:
+		return newModelDelegate(interfaces.ModelIdPlugin, doc, opts...)
 	case *models.SpiderStat:
 		return newModelDelegate(interfaces.ModelIdSpiderStat, doc, opts...)
 	case *models.DataSource:
@@ -56,6 +58,8 @@ func NewModelDelegate(doc interfaces.Model, opts ...ModelDelegateOption) interfa
 		return newModelDelegate(interfaces.ModelIdPassword, doc, opts...)
 	case *models.ExtraValue:
 		return newModelDelegate(interfaces.ModelIdExtraValue, doc, opts...)
+	case *models.PluginStatus:
+		return newModelDelegate(interfaces.ModelIdPluginStatus, doc, opts...)
 	case *models.Git:
 		return newModelDelegate(interfaces.ModelIdGit, doc, opts...)
 	case *models.UserRole:
@@ -66,8 +70,6 @@ func NewModelDelegate(doc interfaces.Model, opts ...ModelDelegateOption) interfa
 		return newModelDelegate(interfaces.ModelIdRolePermission, doc, opts...)
 	case *models.Environment:
 		return newModelDelegate(interfaces.ModelIdEnvironment, doc, opts...)
-	case *models.DependencySetting:
-		return newModelDelegate(interfaces.ModelIdDependencySetting, doc, opts...)
 	default:
 		_ = trace.TraceError(errors.ErrorModelInvalidType)
 		return nil
@@ -85,7 +87,7 @@ func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, opts ...Model
 		id:      id,
 		colName: colName,
 		doc:     doc,
-		cfgPath: config2.GetConfigPath(),
+		cfgPath: config2.DefaultConfigPath,
 		a: &models.Artifact{
 			Col: colName,
 		},
@@ -102,7 +104,7 @@ func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, opts ...Model
 	}
 
 	// grpc client
-	d.c, err = client.GetClient()
+	d.c, err = client.GetClient(d.cfgPath)
 	if err != nil {
 		trace.PrintError(errors.ErrorModelInvalidType)
 		return nil

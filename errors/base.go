@@ -20,6 +20,7 @@ const (
 	ErrorPrefixUser       = "user"
 	ErrorPrefixStats      = "stats"
 	ErrorPrefixEvent      = "event"
+	ErrorPrefixPlugin     = "plugin"
 	ErrorPrefixProcess    = "process"
 	ErrorPrefixGit        = "git"
 	ErrorPrefixResult     = "result"

@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"github.com/crawlab-team/crawlab-core/constants"
-	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
+	"github.com/crawlab-team/crawlab-core/user"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/dig"
 	"net/http"
 )
 
@@ -52,7 +53,11 @@ func newLoginContext() *loginContext {
 	ctx := &loginContext{}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(
+	c := dig.New()
+	if err := c.Provide(user.ProvideGetUserService()); err != nil {
+		panic(err)
+	}
+	if err := c.Invoke(func(
 		userSvc interfaces.UserService,
 	) {
 		ctx.userSvc = userSvc

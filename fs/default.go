@@ -3,8 +3,7 @@ package fs
 import (
 	"github.com/apex/log"
 	"github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
-	"path/filepath"
+	"path"
 )
 
 func init() {
@@ -13,12 +12,11 @@ func init() {
 		log.Warnf("cannot find home directory: %v", err)
 		return
 	}
-	DefaultWorkspacePath = filepath.Join(rootDir, "crawlab_workspace")
-
-	workspacePath := viper.GetString("workspace")
-	if workspacePath == "" {
-		viper.Set("workspace", DefaultWorkspacePath)
-	}
+	DefaultWorkspacePath = path.Join(rootDir, "crawlab_workspace")
+	DefaultRepoPath = path.Join(rootDir, "crawlab_repo")
 }
 
+const DefaultFsPath = "/fs"
+
 var DefaultWorkspacePath string
+var DefaultRepoPath string

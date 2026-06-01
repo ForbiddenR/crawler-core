@@ -57,12 +57,6 @@ func CreateIndexes() {
 		{Keys: bson.M{"priority": 1}},
 		{Keys: bson.M{"parent_id": 1}},
 		{Keys: bson.M{"has_sub": 1}},
-		{Keys: bson.M{"create_ts": -1}},
-	})
-
-	// task stats
-	mongo.GetMongoCol(interfaces.ModelColNameTaskStat).MustCreateIndexes([]mongo2.IndexModel{
-		{Keys: bson.M{"create_ts": 1}},
 	})
 
 	// schedules
@@ -94,6 +88,12 @@ func CreateIndexes() {
 		{Keys: bson.M{"key": 1}},
 	})
 
+	// plugins
+	mongo.GetMongoCol(interfaces.ModelColNamePlugin).MustCreateIndexes([]mongo2.IndexModel{
+		{Keys: bson.M{"name": 1}},
+		{Keys: bson.M{"status": 1}},
+	})
+
 	// data sources
 	mongo.GetMongoCol(interfaces.ModelColNameDataSource).MustCreateIndexes([]mongo2.IndexModel{
 		{Keys: bson.M{"name": 1}},
@@ -111,6 +111,13 @@ func CreateIndexes() {
 		{Keys: bson.M{"t": 1}},
 		{Keys: bson.M{"m": 1, "t": 1}},
 		{Keys: bson.M{"oid": 1, "m": 1, "t": 1}},
+	})
+
+	// plugin status
+	mongo.GetMongoCol(interfaces.ModelColNamePluginStatus).MustCreateIndexes([]mongo2.IndexModel{
+		{Keys: bson.M{"plugin_id": 1}},
+		{Keys: bson.M{"node_id": 1}},
+		{Keys: bson.D{{"plugin_id", 1}, {"node_id", 1}}, Options: options.Index().SetUnique(true)},
 	})
 
 	// roles

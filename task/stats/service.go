@@ -1,9 +1,10 @@
 package stats
 
 import (
-	"github.com/crawlab-team/crawlab-core/container"
+	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/service"
+	"github.com/crawlab-team/crawlab-core/node/config"
 	"github.com/crawlab-team/crawlab-core/result"
 	"github.com/crawlab-team/crawlab-core/task"
 	"github.com/crawlab-team/crawlab-core/task/log"
@@ -11,6 +12,7 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/dig"
 	"sync"
 	"time"
 )
@@ -110,7 +112,7 @@ func (svc *Service) cleanup() {
 	}
 }
 
-func NewTaskStatsService() (svc2 interfaces.TaskStatsService, err error) {
+func NewTaskStatsService(opts ...Option) (svc2 interfaces.TaskStatsService, err error) {
 	// base service
 	baseSvc, err := task.NewBaseService()
 	if err != nil {
@@ -124,16 +126,31 @@ func NewTaskStatsService() (svc2 interfaces.TaskStatsService, err error) {
 		resultServices:  sync.Map{},
 	}
 
+	// apply options
+	for _, opt := range opts {
+		opt(svc)
+	}
+
+	// node config service
+	nodeCfgSvc, err := config.NewNodeConfigService()
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	svc.nodeCfgSvc = nodeCfgSvc
+
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(nodeCfgSvc interfaces.NodeConfigService, modelSvc service.ModelService) {
-		svc.nodeCfgSvc = nodeCfgSvc
+	c := dig.New()
+	if err := c.Provide(service.GetService); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	if err := c.Invoke(func(modelSvc service.ModelService) {
 		svc.modelSvc = modelSvc
 	}); err != nil {
 		return nil, trace.TraceError(err)
 	}
 
 	// log driver
-	svc.logDriver, err = log.GetLogDriver(log.DriverTypeFile)
+	svc.logDriver, err = log.GetLogDriver(log.DriverTypeFile, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -141,15 +158,30 @@ func NewTaskStatsService() (svc2 interfaces.TaskStatsService, err error) {
 	return svc, nil
 }
 
-var _service interfaces.TaskStatsService
+var store = sync.Map{}
 
-func GetTaskStatsService() (svr interfaces.TaskStatsService, err error) {
-	if _service != nil {
-		return _service, nil
+func GetTaskStatsService(path string, opts ...Option) (svr interfaces.TaskStatsService, err error) {
+	if path == "" {
+		path = config2.DefaultConfigPath
 	}
-	_service, err = NewTaskStatsService()
+	opts = append(opts, WithConfigPath(path))
+	res, ok := store.Load(path)
+	if ok {
+		svr, ok = res.(interfaces.TaskStatsService)
+		if ok {
+			return svr, nil
+		}
+	}
+	svr, err = NewTaskStatsService(opts...)
 	if err != nil {
 		return nil, err
 	}
-	return _service, nil
+	store.Store(path, svr)
+	return svr, nil
+}
+
+func ProvideGetTaskStatsService(path string, opts ...Option) func() (svr interfaces.TaskStatsService, err error) {
+	return func() (svr interfaces.TaskStatsService, err error) {
+		return GetTaskStatsService(path, opts...)
+	}
 }

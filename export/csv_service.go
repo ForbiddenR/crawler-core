@@ -19,7 +19,6 @@ import (
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"os"
 	"path"
-	"sort"
 	"strconv"
 	"time"
 )
@@ -116,14 +115,6 @@ func (svc *CsvService) export(export *entity.Export) {
 		log.Errorf("export error (id: %s): %v", export.Id, err)
 		trace.PrintError(err)
 		svc.cache.Set(export.Id, export)
-		return
-	}
-
-	// write bom
-	bom := []byte{0xEF, 0xBB, 0xBF}
-	_, err = csvFile.Write(bom)
-	if err != nil {
-		trace.PrintError(err)
 		return
 	}
 
@@ -270,22 +261,8 @@ func (svc *CsvService) getColumns(query bson.M, export interfaces.Export) (colum
 	// columns
 	columns = make([]string, 0, len(columnsSet))
 	for k := range columnsSet {
-		// skip task key
-		if k == constants.TaskKey {
-			continue
-		}
-
-		// skip _id
-		if k == "_id" {
-			continue
-		}
-
-		// append to columns
 		columns = append(columns, k)
 	}
-
-	// order columns
-	sort.Strings(columns)
 
 	return columns, nil
 }

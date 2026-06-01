@@ -5,14 +5,18 @@ import (
 	"encoding/json"
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
-	"github.com/crawlab-team/crawlab-core/container"
+	envDepsServices "github.com/crawlab-team/crawlab-core/env/deps/services"
 	"github.com/crawlab-team/crawlab-core/grpc/client"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
+	"github.com/crawlab-team/crawlab-core/node/config"
+	"github.com/crawlab-team/crawlab-core/plugin"
+	"github.com/crawlab-team/crawlab-core/task/handler"
 	"github.com/crawlab-team/crawlab-core/utils"
 	grpc "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
 	"github.com/spf13/viper"
+	"go.uber.org/dig"
 	"time"
 )
 
@@ -21,6 +25,8 @@ type WorkerService struct {
 	cfgSvc     interfaces.NodeConfigService
 	client     interfaces.GrpcClient
 	handlerSvc interfaces.TaskHandlerService
+	pluginSvc  interfaces.PluginService
+	envDepsSvc *envDepsServices.Service
 
 	// settings
 	cfgPath           string
@@ -54,6 +60,12 @@ func (svc *WorkerService) Start() {
 
 	// start handler
 	go svc.handlerSvc.Start()
+
+	// start plugin service
+	go svc.pluginSvc.Start()
+
+	// start env deps service
+	go svc.envDepsSvc.Start()
 
 	// wait for quit signal
 	svc.Wait()
@@ -127,6 +139,38 @@ func (svc *WorkerService) handleStreamMessage(msg *grpc.StreamMessage) (err erro
 		if err := svc.handlerSvc.Cancel(t.Id); err != nil {
 			return trace.TraceError(err)
 		}
+	case grpc.StreamMessageCode_INSTALL_PLUGIN:
+		var p models.Plugin
+		if err := json.Unmarshal(msg.Data, &p); err != nil {
+			return trace.TraceError(err)
+		}
+		if err := svc.pluginSvc.InstallPlugin(p.Id); err != nil {
+			return trace.TraceError(err)
+		}
+	case grpc.StreamMessageCode_UNINSTALL_PLUGIN:
+		var p models.Plugin
+		if err := json.Unmarshal(msg.Data, &p); err != nil {
+			return trace.TraceError(err)
+		}
+		if err := svc.pluginSvc.UninstallPlugin(p.Id); err != nil {
+			return trace.TraceError(err)
+		}
+	case grpc.StreamMessageCode_START_PLUGIN:
+		var p models.Plugin
+		if err := json.Unmarshal(msg.Data, &p); err != nil {
+			return trace.TraceError(err)
+		}
+		if err := svc.pluginSvc.StartPlugin(p.Id); err != nil {
+			return trace.TraceError(err)
+		}
+	case grpc.StreamMessageCode_STOP_PLUGIN:
+		var p models.Plugin
+		if err := json.Unmarshal(msg.Data, &p); err != nil {
+			return trace.TraceError(err)
+		}
+		if err := svc.pluginSvc.StopPlugin(p.Id); err != nil {
+			return trace.TraceError(err)
+		}
 	}
 
 	return nil
@@ -184,7 +228,7 @@ func (svc *WorkerService) reportStatus() {
 
 func NewWorkerService(opts ...Option) (res *WorkerService, err error) {
 	svc := &WorkerService{
-		cfgPath:           config2.GetConfigPath(),
+		cfgPath:           config2.DefaultConfigPath,
 		heartbeatInterval: 15 * time.Second,
 		n:                 &models.Node{},
 	}
@@ -201,17 +245,35 @@ func NewWorkerService(opts ...Option) (res *WorkerService, err error) {
 	}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(
+	c := dig.New()
+	if err := c.Provide(config.ProvideConfigService(svc.cfgPath)); err != nil {
+		return nil, err
+	}
+	if err := c.Provide(client.ProvideGetClient(svc.cfgPath, clientOpts...)); err != nil {
+		return nil, err
+	}
+	if err := c.Provide(handler.ProvideGetTaskHandlerService(svc.cfgPath)); err != nil {
+		return nil, err
+	}
+	if err := c.Provide(plugin.ProvideGetPluginService(svc.cfgPath)); err != nil {
+		return nil, err
+	}
+	if err := c.Invoke(func(
 		cfgSvc interfaces.NodeConfigService,
 		client interfaces.GrpcClient,
 		taskHandlerSvc interfaces.TaskHandlerService,
+		pluginSvc interfaces.PluginService,
 	) {
 		svc.cfgSvc = cfgSvc
 		svc.client = client
 		svc.handlerSvc = taskHandlerSvc
+		svc.pluginSvc = pluginSvc
 	}); err != nil {
 		return nil, err
 	}
+
+	// env deps service
+	svc.envDepsSvc = envDepsServices.GetService()
 
 	// init
 	if err := svc.Init(); err != nil {
@@ -223,11 +285,11 @@ func NewWorkerService(opts ...Option) (res *WorkerService, err error) {
 
 func ProvideWorkerService(path string, opts ...Option) func() (interfaces.NodeWorkerService, error) {
 	// path
-	if path == "" || path == config2.GetConfigPath() {
+	if path == "" || path == config2.DefaultConfigPath {
 		if viper.GetString("config.path") != "" {
 			path = viper.GetString("config.path")
 		} else {
-			path = config2.GetConfigPath()
+			path = config2.DefaultConfigPath
 		}
 	}
 	opts = append(opts, WithConfigPath(path))
