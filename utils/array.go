@@ -21,10 +21,7 @@ func GetArrayItems(array interface{}) (res []interface{}, err error) {
 	case reflect.Slice, reflect.Array:
 		s := reflect.ValueOf(array)
 		for i := 0; i < s.Len(); i++ {
-			obj, ok := s.Index(i).Interface().(interface{})
-			if !ok {
-				return nil, errors.New("invalid type")
-			}
+			obj := s.Index(i).Interface()
 			res = append(res, obj)
 		}
 	default:

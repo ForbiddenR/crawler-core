@@ -16,7 +16,7 @@ func NewChanMap() *ChanMap {
 
 func (cm *ChanMap) Chan(key string) chan string {
 	if ch, ok := cm.m.Load(key); ok {
-		return ch.(interface{}).(chan string)
+		return ch.(chan string)
 	}
 	ch := make(chan string, 10)
 	cm.m.Store(key, ch)
@@ -25,7 +25,7 @@ func (cm *ChanMap) Chan(key string) chan string {
 
 func (cm *ChanMap) ChanBlocked(key string) chan string {
 	if ch, ok := cm.m.Load(key); ok {
-		return ch.(interface{}).(chan string)
+		return ch.(chan string)
 	}
 	ch := make(chan string)
 	cm.m.Store(key, ch)
