@@ -2,7 +2,6 @@ package user
 
 import (
 	"github.com/crawlab-team/crawlab-core/constants"
-	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
@@ -11,10 +10,11 @@ import (
 	"github.com/crawlab-team/crawlab-core/utils"
 	mongo2 "github.com/crawlab-team/crawlab-db/mongo"
 	"github.com/crawlab-team/go-trace"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/dig"
 	"time"
 )
 
@@ -201,7 +201,7 @@ func (svc *Service) getSecretFunc() jwt.Keyfunc {
 	}
 }
 
-func NewUserService() (svc2 interfaces.UserService, err error) {
+func NewUserService(opts ...Option) (svc2 interfaces.UserService, err error) {
 	// service
 	svc := &Service{
 		jwtSecret:        "crawlab",
@@ -209,7 +209,11 @@ func NewUserService() (svc2 interfaces.UserService, err error) {
 	}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(modelSvc service.ModelService) {
+	c := dig.New()
+	if err := c.Provide(service.NewService); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	if err := c.Invoke(func(modelSvc service.ModelService) {
 		svc.modelSvc = modelSvc
 	}); err != nil {
 		return nil, trace.TraceError(err)
@@ -223,16 +227,28 @@ func NewUserService() (svc2 interfaces.UserService, err error) {
 	return svc, nil
 }
 
+func ProvideUserService(opts ...Option) func() (svc interfaces.UserService, err error) {
+	return func() (svc interfaces.UserService, err error) {
+		return NewUserService(opts...)
+	}
+}
+
 var userSvc interfaces.UserService
 
-func GetUserService() (svc interfaces.UserService, err error) {
+func GetUserService(opts ...Option) (svc interfaces.UserService, err error) {
 	if userSvc != nil {
 		return userSvc, nil
 	}
-	svc, err = NewUserService()
+	svc, err = NewUserService(opts...)
 	if err != nil {
 		return nil, err
 	}
 	userSvc = svc
 	return svc, nil
+}
+
+func ProvideGetUserService(opts ...Option) func() (svr interfaces.UserService, err error) {
+	return func() (svr interfaces.UserService, err error) {
+		return GetUserService(opts...)
+	}
 }

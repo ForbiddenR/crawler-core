@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/service"
+	"github.com/crawlab-team/crawlab-core/user"
+	"go.uber.org/dig"
 )
 
 var EnvironmentController *environmentController
@@ -26,7 +27,14 @@ func newEnvironmentContext() *environmentContext {
 	ctx := &environmentContext{}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(
+	c := dig.New()
+	if err := c.Provide(service.NewService); err != nil {
+		panic(err)
+	}
+	if err := c.Provide(user.ProvideGetUserService()); err != nil {
+		panic(err)
+	}
+	if err := c.Invoke(func(
 		modelSvc service.ModelService,
 		userSvc interfaces.UserService,
 	) {

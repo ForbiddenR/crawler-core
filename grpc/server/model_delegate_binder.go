@@ -57,6 +57,8 @@ func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
 		return b.process(&m.TaskQueueItem)
 	case interfaces.ModelIdTaskStat:
 		return b.process(&m.TaskStat)
+	case interfaces.ModelIdPlugin:
+		return b.process(&m.Plugin)
 	case interfaces.ModelIdSpiderStat:
 		return b.process(&m.SpiderStat)
 	case interfaces.ModelIdDataSource:
@@ -69,6 +71,8 @@ func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
 		return b.process(&m.Password)
 	case interfaces.ModelIdExtraValue:
 		return b.process(&m.ExtraValue)
+	case interfaces.ModelIdPluginStatus:
+		return b.process(&m.PluginStatus)
 	case interfaces.ModelIdGit:
 		return b.process(&m.Git)
 	case interfaces.ModelIdRole:
@@ -81,8 +85,6 @@ func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
 		return b.process(&m.RolePermission)
 	case interfaces.ModelIdEnvironment:
 		return b.process(&m.Environment)
-	case interfaces.ModelIdDependencySetting:
-		return b.process(&m.DependencySetting)
 	default:
 		return nil, errors.ErrorModelInvalidModelId
 	}

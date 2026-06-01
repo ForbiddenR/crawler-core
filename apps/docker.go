@@ -9,6 +9,7 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"github.com/imroc/req"
 	"github.com/spf13/viper"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -77,7 +78,7 @@ func (app *Docker) Ready() (ok bool) {
 func (app *Docker) replacePaths() (err error) {
 	// read
 	indexHtmlPath := "/app/dist/index.html"
-	indexHtmlBytes, err := os.ReadFile(indexHtmlPath)
+	indexHtmlBytes, err := ioutil.ReadFile(indexHtmlPath)
 	if err != nil {
 		return trace.TraceError(err)
 	}
@@ -106,7 +107,7 @@ func (app *Docker) replacePaths() (err error) {
 	}
 
 	// write
-	if err := os.WriteFile(indexHtmlPath, []byte(indexHtml), os.FileMode(0766)); err != nil {
+	if err := ioutil.WriteFile(indexHtmlPath, []byte(indexHtml), os.FileMode(0766)); err != nil {
 		return trace.TraceError(err)
 	}
 
@@ -177,10 +178,13 @@ func (app *Docker) importDemo() {
 	_ = utils.ImportDemo()
 }
 
-func NewDocker(svr ServerApp) *Docker {
+func NewDocker(opts ...DockerOption) *Docker {
 	dck := &Docker{
-		parent:        svr,
 		fsLogFilePath: "/var/log/weed.log",
+	}
+
+	for _, opt := range opts {
+		opt(dck)
 	}
 
 	dck.Init()
@@ -190,10 +194,10 @@ func NewDocker(svr ServerApp) *Docker {
 
 var dck *Docker
 
-func GetDocker(svr ServerApp) *Docker {
+func GetDocker(opts ...DockerOption) *Docker {
 	if dck != nil {
 		return dck
 	}
-	dck = NewDocker(svr)
+	dck = NewDocker(opts...)
 	return dck
 }

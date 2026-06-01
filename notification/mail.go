@@ -3,16 +3,14 @@ package notification
 import (
 	"errors"
 	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/matcornic/hermes/v2"
 	"gopkg.in/gomail.v2"
 	"net/mail"
 	"runtime/debug"
 	"strconv"
-	"strings"
 )
 
-func SendMail(m *models.NotificationSettingMail, to, cc, title, content string) error {
+func SendMail(s *Setting, to, cc, title, content string) error {
 	// theme
 	theme := new(MailThemeFlat)
 
@@ -22,19 +20,19 @@ func SendMail(m *models.NotificationSettingMail, to, cc, title, content string) 
 		Product: hermes.Product{
 			Logo:      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxnIGZpbGw9Im5vbmUiPgogICAgICAgIDxjaXJjbGUgY3g9IjE1MCIgY3k9IjE1MCIgcj0iMTMwIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjQwIiBzdHJva2U9IiM0MDllZmYiPgogICAgICAgIDwvY2lyY2xlPgogICAgICAgIDxjaXJjbGUgY3g9IjE1MCIgY3k9IjE1MCIgcj0iMTEwIiBmaWxsPSJ3aGl0ZSI+CiAgICAgICAgPC9jaXJjbGU+CiAgICAgICAgPGNpcmNsZSBjeD0iMTUwIiBjeT0iMTUwIiByPSI3MCIgZmlsbD0iIzQwOWVmZiI+CiAgICAgICAgPC9jaXJjbGU+CiAgICAgICAgPHBhdGggZD0iCiAgICAgICAgICAgIE0gMTUwLDE1MAogICAgICAgICAgICBMIDI4MCwyMjUKICAgICAgICAgICAgQSAxNTAsMTUwIDkwIDAgMCAyODAsNzUKICAgICAgICAgICAgIiBmaWxsPSIjNDA5ZWZmIj4KICAgICAgICA8L3BhdGg+CiAgICA8L2c+Cjwvc3ZnPgo=",
 			Name:      "Crawlab",
-			Copyright: "© 2024 Crawlab-Team",
+			Copyright: "© 2021 Crawlab-Team",
 		},
 	}
 
 	// config
-	port, _ := strconv.Atoi(m.Port)
-	password := m.Password // test password: ALWVDPRHBEXOENXD
-	SMTPUser := m.User
+	port, _ := strconv.Atoi(s.Mail.Port)
+	password := s.Mail.Password // test password: ALWVDPRHBEXOENXD
+	SMTPUser := s.Mail.User
 	smtpConfig := smtpAuthentication{
-		Server:         m.Server,
+		Server:         s.Mail.Server,
 		Port:           port,
-		SenderEmail:    m.SenderEmail,
-		SenderIdentity: m.SenderIdentity,
+		SenderEmail:    s.Mail.SenderEmail,
+		SenderIdentity: s.Mail.SenderIdentity,
 		SMTPPassword:   password,
 		SMTPUser:       SMTPUser,
 	}
@@ -131,23 +129,12 @@ func send(smtpConfig smtpAuthentication, options sendOptions, htmlBody string, t
 		Address: smtpConfig.SenderEmail,
 	}
 
-	var toList []string
-	if strings.Contains(options.To, ";") {
-		toList = strings.Split(options.To, ";")
-		// trim space
-		for i, to := range toList {
-			toList[i] = strings.TrimSpace(to)
-		}
-	} else {
-		toList = []string{options.To}
-	}
-
 	m := gomail.NewMessage()
 	m.SetHeader("From", from.String())
-	m.SetHeader("To", getRecipientList(options.To)...)
+	m.SetHeader("To", options.To)
 	m.SetHeader("Subject", options.Subject)
 	if options.Cc != "" {
-		m.SetHeader("Cc", getRecipientList(options.Cc)...)
+		m.SetHeader("Cc", options.Cc)
 	}
 
 	m.SetBody("text/plain", txtBody)
@@ -156,19 +143,6 @@ func send(smtpConfig smtpAuthentication, options sendOptions, htmlBody string, t
 	d := gomail.NewDialer(smtpConfig.Server, smtpConfig.Port, smtpConfig.SMTPUser, smtpConfig.SMTPPassword)
 
 	return d.DialAndSend(m)
-}
-
-func getRecipientList(value string) (values []string) {
-	if strings.Contains(value, ";") {
-		values = strings.Split(value, ";")
-		// trim space
-		for i, v := range values {
-			values[i] = strings.TrimSpace(v)
-		}
-	} else {
-		values = []string{value}
-	}
-	return values
 }
 
 func GetFooter() string {

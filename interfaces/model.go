@@ -9,13 +9,6 @@ type Model interface {
 	SetId(id primitive.ObjectID)
 }
 
-type ModelV2 interface {
-	GetId() (id primitive.ObjectID)
-	SetId(id primitive.ObjectID)
-	SetCreated(by primitive.ObjectID)
-	SetUpdated(by primitive.ObjectID)
-}
-
 type ModelId int
 
 const (
@@ -33,48 +26,50 @@ const (
 	ModelIdVariable
 	ModelIdTaskQueue
 	ModelIdTaskStat
+	ModelIdPlugin
 	ModelIdSpiderStat
 	ModelIdDataSource
 	ModelIdDataCollection
 	ModelIdResult
 	ModelIdPassword
 	ModelIdExtraValue
+	ModelIdPluginStatus
 	ModelIdGit
 	ModelIdRole
 	ModelIdUserRole
 	ModelIdPermission
 	ModelIdRolePermission
 	ModelIdEnvironment
-	ModelIdDependencySetting
 )
 
 const (
-	ModelColNameArtifact          = "artifacts"
-	ModelColNameTag               = "tags"
-	ModelColNameNode              = "nodes"
-	ModelColNameProject           = "projects"
-	ModelColNameSpider            = "spiders"
-	ModelColNameTask              = "tasks"
-	ModelColNameJob               = "jobs"
-	ModelColNameSchedule          = "schedules"
-	ModelColNameUser              = "users"
-	ModelColNameSetting           = "settings"
-	ModelColNameToken             = "tokens"
-	ModelColNameVariable          = "variables"
-	ModelColNameTaskQueue         = "task_queue"
-	ModelColNameTaskStat          = "task_stats"
-	ModelColNameSpiderStat        = "spider_stats"
-	ModelColNameDataSource        = "data_sources"
-	ModelColNameDataCollection    = "data_collections"
-	ModelColNamePasswords         = "passwords"
-	ModelColNameExtraValues       = "extra_values"
-	ModelColNameGit               = "gits"
-	ModelColNameRole              = "roles"
-	ModelColNameUserRole          = "user_roles"
-	ModelColNamePermission        = "permissions"
-	ModelColNameRolePermission    = "role_permissions"
-	ModelColNameEnvironment       = "environments"
-	ModelColNameDependencySetting = "dependency_settings"
+	ModelColNameArtifact       = "artifacts"
+	ModelColNameTag            = "tags"
+	ModelColNameNode           = "nodes"
+	ModelColNameProject        = "projects"
+	ModelColNameSpider         = "spiders"
+	ModelColNameTask           = "tasks"
+	ModelColNameJob            = "jobs"
+	ModelColNameSchedule       = "schedules"
+	ModelColNameUser           = "users"
+	ModelColNameSetting        = "settings"
+	ModelColNameToken          = "tokens"
+	ModelColNameVariable       = "variables"
+	ModelColNameTaskQueue      = "task_queue"
+	ModelColNameTaskStat       = "task_stats"
+	ModelColNamePlugin         = "plugins"
+	ModelColNameSpiderStat     = "spider_stats"
+	ModelColNameDataSource     = "data_sources"
+	ModelColNameDataCollection = "data_collections"
+	ModelColNamePasswords      = "passwords"
+	ModelColNameExtraValues    = "extra_values"
+	ModelColNamePluginStatus   = "plugin_status"
+	ModelColNameGit            = "gits"
+	ModelColNameRole           = "roles"
+	ModelColNameUserRole       = "user_roles"
+	ModelColNamePermission     = "permissions"
+	ModelColNameRolePermission = "role_permissions"
+	ModelColNameEnvironment    = "environments"
 )
 
 type ModelWithTags interface {

@@ -34,6 +34,14 @@ func WithServerTaskServerService(server interfaces.GrpcServer) TaskServerOption 
 	}
 }
 
+type PluginServerOption func(svr *PluginServer)
+
+func WithServerPluginServerService(server interfaces.GrpcServer) PluginServerOption {
+	return func(svr *PluginServer) {
+		svr.server = server
+	}
+}
+
 type MessageServerOption func(svr *MessageServer)
 
 func WithServerMessageServerService(server interfaces.GrpcServer) MessageServerOption {

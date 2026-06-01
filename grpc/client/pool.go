@@ -5,7 +5,9 @@ import (
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/go-trace"
 	"github.com/emirpasic/gods/lists/arraylist"
+	"go.uber.org/dig"
 	"math/rand"
+	"sync"
 )
 
 type Pool struct {
@@ -35,7 +37,7 @@ func (p *Pool) Init() (err error) {
 }
 
 func (p *Pool) NewClient() (err error) {
-	c, err := NewClient()
+	c, err := NewClient(WithConfigPath(p.cfgPath))
 	if err != nil {
 		return trace.TraceError(err)
 	}
@@ -67,7 +69,7 @@ func (p *Pool) getRandomIndex() (idx int) {
 	return rand.Intn(p.clients.Size())
 }
 
-func NewPool(opts ...PoolOption) (p interfaces.GrpcClientPool, err error) {
+func NewNewPool(opts ...PoolOption) (p interfaces.GrpcClientPool, err error) {
 	// pool
 	p = &Pool{
 		size:    1,
@@ -85,4 +87,37 @@ func NewPool(opts ...PoolOption) (p interfaces.GrpcClientPool, err error) {
 	}
 
 	return p, nil
+}
+
+func ProvideClientPool(path string) func() (interfaces.GrpcClientPool, error) {
+	return func() (interfaces.GrpcClientPool, error) {
+		return NewNewPool(WithPoolConfigPath(path))
+	}
+}
+
+var poolStore = sync.Map{}
+
+func GetClientPool(path string) (p interfaces.GrpcClientPool, err error) {
+	res, ok := poolStore.Load(path)
+	if !ok {
+		return createClientPool(path)
+	}
+	p, ok = res.(interfaces.GrpcClientPool)
+	if !ok {
+		return createClientPool(path)
+	}
+	return p, nil
+}
+
+func createClientPool(path string) (p2 interfaces.GrpcClientPool, err error) {
+	c := dig.New()
+	if err := c.Provide(ProvideClientPool(path)); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	if err := c.Invoke(func(p interfaces.GrpcClientPool) {
+		p2 = p
+	}); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	return p2, nil
 }

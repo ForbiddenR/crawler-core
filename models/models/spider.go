@@ -25,13 +25,9 @@ type Spider struct {
 	Stat         *SpiderStat          `json:"stat,omitempty" bson:"-"`
 
 	// execution
-	Cmd         string `json:"cmd" bson:"cmd"`     // execute command
-	Param       string `json:"param" bson:"param"` // default task param
-	Priority    int    `json:"priority" bson:"priority"`
-	AutoInstall bool   `json:"auto_install" bson:"auto_install"`
-
-	// settings
-	IncrementalSync bool `json:"incremental_sync" bson:"incremental_sync"` // whether to incrementally sync files
+	Cmd      string `json:"cmd" bson:"cmd"`     // execute command
+	Param    string `json:"param" bson:"param"` // default task param
+	Priority int    `json:"priority" bson:"priority"`
 }
 
 func (s *Spider) GetId() (id primitive.ObjectID) {
@@ -108,22 +104,6 @@ func (s *Spider) GetColId() (id primitive.ObjectID) {
 
 func (s *Spider) SetColId(id primitive.ObjectID) {
 	s.ColId = id
-}
-
-func (s *Spider) GetIncrementalSync() (incrementalSync bool) {
-	return s.IncrementalSync
-}
-
-func (s *Spider) SetIncrementalSync(incrementalSync bool) {
-	s.IncrementalSync = incrementalSync
-}
-
-func (s *Spider) GetAutoInstall() (autoInstall bool) {
-	return s.AutoInstall
-}
-
-func (s *Spider) SetAutoInstall(autoInstall bool) {
-	s.AutoInstall = autoInstall
 }
 
 type SpiderList []Spider

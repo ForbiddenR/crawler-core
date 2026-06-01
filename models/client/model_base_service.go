@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
+	"github.com/crawlab-team/crawlab-core/grpc/client"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/mongo"
@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/dig"
 	"time"
 )
 
@@ -183,7 +184,7 @@ func (d *BaseServiceDelegate) Count(query bson.M) (total int, err error) {
 	ctx, cancel := d.c.Context()
 	defer cancel()
 	req := d.mustNewRequest(&entity.GrpcBaseServiceParams{Query: query})
-	res, err := d.getModelBaseServiceClient().Count(ctx, req)
+	res, err := d.getModelBaseServiceClient().Insert(ctx, req)
 	if err != nil {
 		return total, err
 	}
@@ -235,7 +236,11 @@ func NewBaseServiceDelegate(opts ...ModelBaseServiceDelegateOption) (svc2 interf
 	}
 
 	// dependency injection
-	if err := container.GetContainer().Invoke(func(client interfaces.GrpcClient) {
+	c := dig.New()
+	if err := c.Provide(client.ProvideGetClient(svc.GetConfigPath())); err != nil {
+		return nil, err
+	}
+	if err := c.Invoke(func(client interfaces.GrpcClient) {
 		svc.c = client
 	}); err != nil {
 		return nil, err

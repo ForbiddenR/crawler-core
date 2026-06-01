@@ -13,10 +13,6 @@ import (
 	_ "net/http/pprof"
 )
 
-func init() {
-	injectModules()
-}
-
 type Server struct {
 	// settings
 	grpcAddress interfaces.Address
@@ -37,7 +33,7 @@ func (app *Server) SetGrpcAddress(address interfaces.Address) {
 	app.grpcAddress = address
 }
 
-func (app *Server) GetApi() (api ApiApp) {
+func (app *Server) GetApi() (api *Api) {
 	return app.api
 }
 
@@ -100,11 +96,16 @@ func (app *Server) initPprof() {
 	}
 }
 
-func NewServer() (app NodeApp) {
+func NewServer(opts ...ServerOption) (app ServerApp) {
 	// server
 	svr := &Server{
 		WithConfigPath: config.NewConfigPathService(),
 		quit:           make(chan int, 1),
+	}
+
+	// apply options
+	for _, opt := range opts {
+		opt(svr)
 	}
 
 	// service options
@@ -120,7 +121,7 @@ func NewServer() (app NodeApp) {
 
 		// docker
 		if utils.IsDocker() {
-			svr.dck = GetDocker(svr)
+			svr.dck = GetDocker(WithDockerParent(svr))
 		}
 	}
 
@@ -138,12 +139,12 @@ func NewServer() (app NodeApp) {
 	return svr
 }
 
-var server NodeApp
+var server ServerApp
 
-func GetServer() NodeApp {
+func GetServer(opts ...ServerOption) ServerApp {
 	if server != nil {
 		return server
 	}
-	server = NewServer()
+	server = NewServer(opts...)
 	return server
 }

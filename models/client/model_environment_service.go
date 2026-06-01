@@ -51,9 +51,7 @@ func (svc *EnvironmentServiceDelegate) GetEnvironmentList(query bson.M, opts *mo
 	return res, nil
 }
 
-func NewEnvironmentServiceDelegate() (svc2 interfaces.GrpcClientModelEnvironmentService, err error) {
-	var opts []ModelBaseServiceDelegateOption
-
+func NewEnvironmentServiceDelegate(opts ...ModelBaseServiceDelegateOption) (svc2 interfaces.GrpcClientModelEnvironmentService, err error) {
 	// apply options
 	opts = append(opts, WithBaseServiceModelId(interfaces.ModelIdEnvironment))
 
@@ -67,4 +65,13 @@ func NewEnvironmentServiceDelegate() (svc2 interfaces.GrpcClientModelEnvironment
 	svc := &EnvironmentServiceDelegate{baseSvc}
 
 	return svc, nil
+}
+
+func ProvideEnvironmentServiceDelegate(path string, opts ...ModelBaseServiceDelegateOption) func() (svc interfaces.GrpcClientModelEnvironmentService, err error) {
+	if path != "" {
+		opts = append(opts, WithBaseServiceConfigPath(path))
+	}
+	return func() (svc interfaces.GrpcClientModelEnvironmentService, err error) {
+		return NewEnvironmentServiceDelegate(opts...)
+	}
 }

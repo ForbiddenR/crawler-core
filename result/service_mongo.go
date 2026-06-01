@@ -1,8 +1,6 @@
 package result
 
 import (
-	"time"
-
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -15,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 type ServiceMongo struct {
@@ -40,7 +39,7 @@ func (svc *ServiceMongo) Count(query generic.ListQuery) (n int, err error) {
 }
 
 func (svc *ServiceMongo) Insert(docs ...interface{}) (err error) {
-	if svc.dc.Dedup.Enabled && len(svc.dc.Dedup.Keys) > 0 {
+	if svc.dc.Dedup.Enabled {
 		for _, doc := range docs {
 			hash, err := utils.GetResultHash(doc, svc.dc.Dedup.Keys)
 			if err != nil {

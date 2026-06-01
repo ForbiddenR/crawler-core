@@ -55,9 +55,7 @@ func (svc *NodeServiceDelegate) GetNodeList(query bson.M, opts *mongo.FindOption
 	return res, nil
 }
 
-func NewNodeServiceDelegate() (svc2 interfaces.GrpcClientModelNodeService, err error) {
-	var opts []ModelBaseServiceDelegateOption
-
+func NewNodeServiceDelegate(opts ...ModelBaseServiceDelegateOption) (svc2 interfaces.GrpcClientModelNodeService, err error) {
 	// apply options
 	opts = append(opts, WithBaseServiceModelId(interfaces.ModelIdNode))
 
@@ -71,4 +69,13 @@ func NewNodeServiceDelegate() (svc2 interfaces.GrpcClientModelNodeService, err e
 	svc := &NodeServiceDelegate{baseSvc}
 
 	return svc, nil
+}
+
+func ProvideNodeServiceDelegate(path string, opts ...ModelBaseServiceDelegateOption) func() (svc interfaces.GrpcClientModelNodeService, err error) {
+	if path != "" {
+		opts = append(opts, WithBaseServiceConfigPath(path))
+	}
+	return func() (svc interfaces.GrpcClientModelNodeService, err error) {
+		return NewNodeServiceDelegate(opts...)
+	}
 }

@@ -47,14 +47,14 @@ func killProcessWithTimeout(p *process.Process, timeout time.Duration, killFunc 
 		}
 		time.Sleep(1 * time.Second)
 	}
-	return killProcess(p, true)
+	return forceKillProcess(p)
 }
 
 func killProcessRecursive(p *process.Process, force bool) (err error) {
 	// children processes
 	cps, err := p.Children()
 	if err != nil {
-		return killProcess(p, force)
+		return killProcess(p)
 	}
 
 	// iterate children processes
@@ -67,13 +67,15 @@ func killProcessRecursive(p *process.Process, force bool) (err error) {
 	return nil
 }
 
-func killProcess(p *process.Process, force bool) (err error) {
-	if force {
-		err = p.Kill()
-	} else {
-		err = p.Terminate()
+func killProcess(p *process.Process) (err error) {
+	if err := p.Terminate(); err != nil {
+		return trace.TraceError(err)
 	}
-	if err != nil {
+	return nil
+}
+
+func forceKillProcess(p *process.Process) (err error) {
+	if err := p.Kill(); err != nil {
 		return trace.TraceError(err)
 	}
 	return nil

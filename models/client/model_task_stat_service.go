@@ -51,9 +51,7 @@ func (svc *TaskStatServiceDelegate) GetTaskStatList(query bson.M, opts *mongo.Fi
 	return res, nil
 }
 
-func NewTaskStatServiceDelegate() (svc2 interfaces.GrpcClientModelTaskStatService, err error) {
-	var opts []ModelBaseServiceDelegateOption
-
+func NewTaskStatServiceDelegate(opts ...ModelBaseServiceDelegateOption) (svc2 interfaces.GrpcClientModelTaskStatService, err error) {
 	// apply options
 	opts = append(opts, WithBaseServiceModelId(interfaces.ModelIdTaskStat))
 
@@ -67,4 +65,13 @@ func NewTaskStatServiceDelegate() (svc2 interfaces.GrpcClientModelTaskStatServic
 	svc := &TaskStatServiceDelegate{baseSvc}
 
 	return svc, nil
+}
+
+func ProvideTaskStatServiceDelegate(path string, opts ...ModelBaseServiceDelegateOption) func() (svc interfaces.GrpcClientModelTaskStatService, err error) {
+	if path != "" {
+		opts = append(opts, WithBaseServiceConfigPath(path))
+	}
+	return func() (svc interfaces.GrpcClientModelTaskStatService, err error) {
+		return NewTaskStatServiceDelegate(opts...)
+	}
 }
