@@ -1,8 +1,14 @@
 package controllers
 
 import (
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/blang/semver/v4"
 	"github.com/crawlab-team/crawlab-core/env/deps/constants"
 	"github.com/crawlab-team/crawlab-core/env/deps/entity"
@@ -16,12 +22,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"io/ioutil"
-	"net/http"
-	"path"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 var EnvDepsController ActionController
@@ -360,7 +360,7 @@ func (ctx *envDepsContext) SpiderInstall(c *gin.Context) {
 	case constants.DependencyConfigPackageJson:
 		langSvc = ctx.Svc().NodeSvc()
 	default:
-		HandleErrorInternalServerError(c, errors.New(fmt.Sprintf("invalid dependency type: %s", dependencyType)))
+		HandleErrorInternalServerError(c, fmt.Errorf("invalid dependency type: %s", dependencyType))
 		return
 	}
 
@@ -415,7 +415,7 @@ func (ctx *envDepsContext) SpiderUninstall(c *gin.Context) {
 	case constants.DependencyConfigPackageJson:
 		langSvc = ctx.Svc().NodeSvc()
 	default:
-		HandleErrorInternalServerError(c, errors.New(fmt.Sprintf("invalid dependency type: %s", dependencyType)))
+		HandleErrorInternalServerError(c, fmt.Errorf("invalid dependency type: %s", dependencyType))
 		return
 	}
 
@@ -514,13 +514,13 @@ func (ctx *envDepsContext) _getDependenciesRequirementsTxt(workspacePath string)
 
 		// validate regex match result
 		if !pattern.MatchString(line) {
-			return nil, trace.TraceError(errors.New(fmt.Sprintf("invalid %s", constants.DependencyConfigRequirementsTxt)))
+			return nil, trace.TraceError(fmt.Errorf("invalid %s", constants.DependencyConfigRequirementsTxt))
 		}
 
 		// sub matches
 		matches := pattern.FindStringSubmatch(line)
 		if len(matches) < 2 {
-			return nil, trace.TraceError(errors.New(fmt.Sprintf("invalid %s", constants.DependencyConfigRequirementsTxt)))
+			return nil, trace.TraceError(fmt.Errorf("invalid %s", constants.DependencyConfigRequirementsTxt))
 		}
 
 		// dependency result

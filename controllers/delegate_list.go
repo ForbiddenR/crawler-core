@@ -173,7 +173,7 @@ func (d *ListControllerDelegate) getAll(c *gin.Context) {
 		}
 		return
 	}
-	log.Debugf("getAll -> d.svc.GetList:end. elapsed: %d ms", time.Now().Sub(tic).Milliseconds())
+	log.Debugf("getAll -> d.svc.GetList:end. elapsed: %d ms", time.Since(tic).Milliseconds())
 	tic = time.Now()
 
 	// total count
@@ -184,7 +184,7 @@ func (d *ListControllerDelegate) getAll(c *gin.Context) {
 		HandleErrorInternalServerError(c, err)
 		return
 	}
-	log.Debugf("getAll -> d.svc.Count:end. elapsed: %d ms", time.Now().Sub(tic).Milliseconds())
+	log.Debugf("getAll -> d.svc.Count:end. elapsed: %d ms", time.Since(tic).Milliseconds())
 
 	// response
 	HandleSuccessWithListData(c, list, total)

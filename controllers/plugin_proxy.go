@@ -1,8 +1,11 @@
 package controllers
 
 import (
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+
 	"github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
 	errors2 "github.com/crawlab-team/crawlab-core/errors"
@@ -15,9 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/imroc/req"
 	"go.uber.org/dig"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 var PluginProxyController ActionController
@@ -78,7 +78,7 @@ func (ctx *pluginProxyContext) do(c *gin.Context) {
 	case constants.PluginProtoGrpc:
 		ctx._doGrpc(c, p, data)
 	default:
-		HandleErrorInternalServerError(c, errors.New(fmt.Sprintf("%s is not implemented", p.Proto)))
+		HandleErrorInternalServerError(c, fmt.Errorf("%s is not implemented", p.Proto))
 	}
 }
 

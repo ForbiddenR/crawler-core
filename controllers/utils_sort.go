@@ -25,7 +25,7 @@ func GetSortsOption(c *gin.Context) (sort bson.D, err error) {
 		return nil, err
 	}
 
-	if sorts == nil || len(sorts) == 0 {
+	if len(sorts) == 0 {
 		return bson.D{{"_id", -1}}, nil
 	}
 
