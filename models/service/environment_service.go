@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeEnvironment(d interface{}, err error) (res *models2.Environment, err2 error) {
+func convertTypeEnvironment(d any, err error) (res *models2.Environment, err2 error) {
 	if err != nil {
 		return nil, err
 	}

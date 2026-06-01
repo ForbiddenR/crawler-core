@@ -2,11 +2,12 @@ package utils
 
 import (
 	"encoding/json"
+
 	"github.com/crawlab-team/crawlab-core/interfaces"
 )
 
-func GetResultHash(value interface{}, keys []string) (res string, err error) {
-	m := make(map[string]interface{})
+func GetResultHash(value any, keys []string) (res string, err error) {
+	m := make(map[string]any)
 	for _, k := range keys {
 		_value, ok := value.(interfaces.Result)
 		if !ok {

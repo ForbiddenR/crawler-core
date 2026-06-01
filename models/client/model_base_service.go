@@ -2,6 +2,8 @@ package client
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/entity"
@@ -17,7 +19,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/dig"
-	"time"
 )
 
 type BaseServiceDelegate struct {
@@ -85,7 +86,7 @@ func (d *BaseServiceDelegate) GetList(query bson.M, opts *mongo.FindOptions) (l 
 	return NewListBinder(d.id, res).Bind()
 }
 
-func (d *BaseServiceDelegate) DeleteById(id primitive.ObjectID, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) DeleteById(id primitive.ObjectID, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -97,7 +98,7 @@ func (d *BaseServiceDelegate) DeleteById(id primitive.ObjectID, args ...interfac
 	return nil
 }
 
-func (d *BaseServiceDelegate) Delete(query bson.M, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) Delete(query bson.M, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -109,7 +110,7 @@ func (d *BaseServiceDelegate) Delete(query bson.M, args ...interface{}) (err err
 	return nil
 }
 
-func (d *BaseServiceDelegate) DeleteList(query bson.M, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) DeleteList(query bson.M, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -121,7 +122,7 @@ func (d *BaseServiceDelegate) DeleteList(query bson.M, args ...interface{}) (err
 	return nil
 }
 
-func (d *BaseServiceDelegate) ForceDeleteList(query bson.M, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) ForceDeleteList(query bson.M, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -133,7 +134,7 @@ func (d *BaseServiceDelegate) ForceDeleteList(query bson.M, args ...interface{})
 	return nil
 }
 
-func (d *BaseServiceDelegate) UpdateById(id primitive.ObjectID, update bson.M, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) UpdateById(id primitive.ObjectID, update bson.M, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -145,7 +146,7 @@ func (d *BaseServiceDelegate) UpdateById(id primitive.ObjectID, update bson.M, a
 	return nil
 }
 
-func (d *BaseServiceDelegate) Update(query bson.M, update bson.M, fields []string, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) Update(query bson.M, update bson.M, fields []string, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -157,7 +158,7 @@ func (d *BaseServiceDelegate) Update(query bson.M, update bson.M, fields []strin
 	return nil
 }
 
-func (d *BaseServiceDelegate) UpdateDoc(query bson.M, doc interfaces.Model, fields []string, args ...interface{}) (err error) {
+func (d *BaseServiceDelegate) UpdateDoc(query bson.M, doc interfaces.Model, fields []string, args ...any) (err error) {
 	u := utils.GetUserFromArgs(args...)
 	ctx, cancel := d.c.Context()
 	defer cancel()
@@ -169,7 +170,7 @@ func (d *BaseServiceDelegate) UpdateDoc(query bson.M, doc interfaces.Model, fiel
 	return nil
 }
 
-func (d *BaseServiceDelegate) Insert(u interfaces.User, docs ...interface{}) (err error) {
+func (d *BaseServiceDelegate) Insert(u interfaces.User, docs ...any) (err error) {
 	ctx, cancel := d.c.Context()
 	defer cancel()
 	req := d.mustNewRequest(&entity.GrpcBaseServiceParams{Docs: docs, User: u})

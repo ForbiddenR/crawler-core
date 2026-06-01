@@ -42,7 +42,7 @@ func (svc *RouterService) RegisterListControllerToGroup(group *gin.RouterGroup, 
 	group.DELETE(basePath, ctr.DeleteList)
 }
 
-func (svc *RouterService) RegisterActionControllerToGroup(group *gin.RouterGroup, basePath string, ctr controllers.ActionController) {
+func (_ *RouterService) RegisterActionControllerToGroup(group *gin.RouterGroup, basePath string, ctr controllers.ActionController) {
 	for _, action := range ctr.Actions() {
 		routerPath := path.Join(basePath, action.Path)
 		switch action.Method {

@@ -3,6 +3,9 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -19,8 +22,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -267,7 +268,7 @@ func (svc *Service) GetSpiderById(id primitive.ObjectID) (s interfaces.Spider, e
 func (svc *Service) getRunnerCount() (n int) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
-	svc.runners.Range(func(key, value interface{}) bool {
+	svc.runners.Range(func(key, value any) bool {
 		n++
 		return true
 	})

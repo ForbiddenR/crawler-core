@@ -1,10 +1,11 @@
 package utils
 
 import (
+	"reflect"
+
 	"github.com/emirpasic/gods/sets/hashset"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"reflect"
 )
 
 func BsonMEqual(v1, v2 bson.M) (ok bool) {
@@ -111,7 +112,7 @@ func DenormalizeBsonMObjectId(m bson.M) (res bson.M) {
 	return m
 }
 
-func NormalizeObjectId(v interface{}) (res interface{}) {
+func NormalizeObjectId(v any) (res any) {
 	switch t := v.(type) {
 	case string:
 		oid, err := primitive.ObjectIDFromHex(t)

@@ -1,6 +1,8 @@
 package ds
 
 import (
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -11,7 +13,6 @@ import (
 	"github.com/crawlab-team/crawlab-db/mongo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type MongoService struct {
@@ -27,12 +28,12 @@ type MongoService struct {
 	t   time.Time
 }
 
-func (svc *MongoService) Insert(records ...interface{}) (err error) {
+func (svc *MongoService) Insert(records ...any) (err error) {
 	_, err = svc.col.InsertMany(records)
 	return err
 }
 
-func (svc *MongoService) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
+func (svc *MongoService) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
 	var docs []models.Result
 	if err := svc.col.Find(utils.GetMongoQuery(query), utils.GetMongoOpts(opts)).All(&docs); err != nil {
 		return nil, err

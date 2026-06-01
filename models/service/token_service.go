@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeToken(d interface{}, err error) (res *models2.Token, err2 error) {
+func convertTypeToken(d any, err error) (res *models2.Token, err2 error) {
 	if err != nil {
 		return nil, err
 	}

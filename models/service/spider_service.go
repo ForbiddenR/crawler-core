@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeSpider(d interface{}, err error) (res *models2.Spider, err2 error) {
+func convertTypeSpider(d any, err error) (res *models2.Spider, err2 error) {
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 package ds
 
 import (
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/entity"
@@ -12,7 +14,6 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"github.com/segmentio/kafka-go"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 )
 
 type KafkaService struct {
@@ -27,7 +28,7 @@ type KafkaService struct {
 	t  time.Time
 }
 
-func (svc *KafkaService) Insert(records ...interface{}) (err error) {
+func (svc *KafkaService) Insert(records ...any) (err error) {
 	var messages []kafka.Message
 	for _, r := range records {
 		switch r.(type) {
@@ -47,7 +48,7 @@ func (svc *KafkaService) Insert(records ...interface{}) (err error) {
 	return nil
 }
 
-func (svc *KafkaService) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
+func (svc *KafkaService) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
 	// N/A
 	return nil, nil
 }

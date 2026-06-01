@@ -6,8 +6,8 @@ import (
 
 type ExtraValue interface {
 	Model
-	GetValue() (v interface{})
-	SetValue(v interface{})
+	GetValue() (v any)
+	SetValue(v any)
 	GetObjectId() (oid primitive.ObjectID)
 	SetObjectId(oid primitive.ObjectID)
 	GetModel() (m string)

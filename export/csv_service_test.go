@@ -3,20 +3,21 @@ package export
 import (
 	"encoding/csv"
 	"fmt"
+	"os"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-db/mongo"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"os"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestCsvService_Export(t *testing.T) {
 	// test data rows
-	var rows []interface{}
+	var rows []any
 	for i := 0; i < 10; i++ {
 		data := bson.M{
 			"no":              i,

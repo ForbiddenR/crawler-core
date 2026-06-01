@@ -1,8 +1,9 @@
 package interfaces
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type PluginService interface {
@@ -13,6 +14,6 @@ type PluginService interface {
 	UninstallPlugin(id primitive.ObjectID) (err error)
 	StartPlugin(id primitive.ObjectID) (err error)
 	StopPlugin(id primitive.ObjectID) (err error)
-	GetPublicPluginList() (res interface{}, err error)
-	GetPublicPluginInfo(fullName string) (res interface{}, err error)
+	GetPublicPluginList() (res any, err error)
+	GetPublicPluginInfo(fullName string) (res any, err error)
 }

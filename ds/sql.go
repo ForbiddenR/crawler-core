@@ -1,6 +1,8 @@
 package ds
 
 import (
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/crawlab-team/crawlab-core/models/service"
@@ -8,7 +10,6 @@ import (
 	"github.com/crawlab-team/crawlab-db/generic"
 	"github.com/crawlab-team/go-trace"
 	"github.com/upper/db/v4"
-	"time"
 )
 
 type SqlService struct {
@@ -23,7 +24,7 @@ type SqlService struct {
 	t   time.Time
 }
 
-func (svc *SqlService) Insert(records ...interface{}) (err error) {
+func (svc *SqlService) Insert(records ...any) (err error) {
 	for _, d := range records {
 		var r entity.Result
 		switch d.(type) {
@@ -41,7 +42,7 @@ func (svc *SqlService) Insert(records ...interface{}) (err error) {
 	return nil
 }
 
-func (svc *SqlService) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
+func (svc *SqlService) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
 	var docs []entity.Result
 	if err := svc.col.Find(utils2.GetSqlQuery(query)).
 		Offset(opts.Skip).

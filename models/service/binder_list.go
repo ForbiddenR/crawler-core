@@ -87,7 +87,7 @@ func (b *ListBinder) Bind() (l interfaces.List, err error) {
 	}
 }
 
-func (b *ListBinder) Process(d interface{}) (l interfaces.List, err error) {
+func (b *ListBinder) Process(d any) (l interfaces.List, err error) {
 	if err := b.fr.All(d); err != nil {
 		return l, trace.TraceError(err)
 	}

@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -23,10 +28,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"io"
-	"os"
-	"strings"
-	"time"
 )
 
 type Service struct {
@@ -309,7 +310,7 @@ Please find the task data as below.
 			},
 		},
 	}
-	var data []interface{}
+	var data []any
 	for _, s := range settings {
 		data = append(data, s)
 	}

@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeProject(d interface{}, err error) (res *models2.Project, err2 error) {
+func convertTypeProject(d any, err error) (res *models2.Project, err2 error) {
 	if err != nil {
 		return nil, err
 	}

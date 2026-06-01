@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"github.com/crawlab-team/go-trace"
 	"io"
 	"reflect"
 	"unsafe"
+
+	"github.com/crawlab-team/go-trace"
 )
 
 func BytesToString(b []byte) string {
@@ -18,7 +19,7 @@ func Close(c io.Closer) {
 	}
 }
 
-func Contains(array interface{}, val interface{}) (fla bool) {
+func Contains(array any, val any) (fla bool) {
 	fla = false
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Slice:

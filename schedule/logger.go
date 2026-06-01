@@ -2,21 +2,22 @@ package schedule
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/apex/log"
 	"github.com/crawlab-team/go-trace"
 	"github.com/robfig/cron/v3"
-	"strings"
 )
 
 type Logger struct {
 }
 
-func (l *Logger) Info(msg string, keysAndValues ...interface{}) {
+func (l *Logger) Info(msg string, keysAndValues ...any) {
 	p := l.getPlaceholder(len(keysAndValues))
 	log.Infof(fmt.Sprintf("cron: %s %s", msg, p), keysAndValues...)
 }
 
-func (l *Logger) Error(err error, msg string, keysAndValues ...interface{}) {
+func (l *Logger) Error(err error, msg string, keysAndValues ...any) {
 	p := l.getPlaceholder(len(keysAndValues))
 	log.Errorf(fmt.Sprintf("cron: %s %s", msg, p), keysAndValues...)
 	trace.PrintError(err)

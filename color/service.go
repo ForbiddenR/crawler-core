@@ -64,7 +64,7 @@ func (svc *Service) GetRandom() (res interfaces.Color, err error) {
 func (svc *Service) getRandomColorHex() (res string, err error) {
 	n := 6
 	arr := make([]string, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		arr[i], err = svc.getRandomHexChar()
 		if err != nil {
 			return res, err

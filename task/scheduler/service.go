@@ -2,6 +2,10 @@ package scheduler
 
 import (
 	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -24,9 +28,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"math/rand"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -92,7 +93,7 @@ func (svc *Service) Enqueue(t interfaces.Task) (t2 interfaces.Task, err error) {
 	return t, nil
 }
 
-func (svc *Service) Cancel(id primitive.ObjectID, args ...interface{}) (err error) {
+func (svc *Service) Cancel(id primitive.ObjectID, args ...any) (err error) {
 	// user
 	u := utils.GetUserFromArgs(args...)
 

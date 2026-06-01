@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path"
+	"time"
+
 	"github.com/ReneKroon/ttlcache"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -14,9 +18,6 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"github.com/hashicorp/go-uuid"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"os"
-	"path"
-	"time"
 )
 
 type JsonService struct {
@@ -100,7 +101,7 @@ func (svc *JsonService) export(export *entity.Export) {
 	cur := col.Find(query, nil).GetCursor()
 
 	// data
-	var jsonData []interface{}
+	var jsonData []any
 
 	// iterate cursor
 	i := 0
@@ -138,7 +139,7 @@ func (svc *JsonService) export(export *entity.Export) {
 		}
 
 		// convert raw data to entity
-		var data map[string]interface{}
+		var data map[string]any
 		err = cur.Decode(&data)
 		if err != nil {
 			// error

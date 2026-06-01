@@ -13,17 +13,17 @@ type TTLMap struct {
 
 type expireEntry struct {
 	ExpiresAt time.Time
-	Value     interface{}
+	Value     any
 }
 
-func (t *TTLMap) Store(key string, val interface{}) {
+func (t *TTLMap) Store(key string, val any) {
 	t.data.Store(key, expireEntry{
 		ExpiresAt: time.Now().Add(t.TTL),
 		Value:     val,
 	})
 }
 
-func (t *TTLMap) Load(key string) (val interface{}) {
+func (t *TTLMap) Load(key string) (val any) {
 	entry, ok := t.data.Load(key)
 	if !ok {
 		return nil
@@ -44,7 +44,7 @@ func NewTTLMap(ttl time.Duration) (m *TTLMap) {
 
 	go func() {
 		for now := range time.Tick(time.Second) {
-			m.data.Range(func(k, v interface{}) bool {
+			m.data.Range(func(k, v any) bool {
 				expiresAt := v.(expireEntry).ExpiresAt
 				if expiresAt.Before(now) {
 					m.data.Delete(k)

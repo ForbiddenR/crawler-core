@@ -2,6 +2,8 @@ package test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -10,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"testing"
 )
 
 func TestModelBaseService_GetById(t *testing.T) {
@@ -263,7 +264,7 @@ func TestModelBaseService_Insert(t *testing.T) {
 	T.Setup(t)
 
 	// insert
-	var docs []interface{}
+	var docs []any
 	n := 10
 	for i := 0; i < n; i++ {
 		docs = append(docs, models.Project{

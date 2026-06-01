@@ -3,6 +3,9 @@ package services
 import (
 	"encoding/json"
 	"errors"
+	"sync"
+	"time"
+
 	"github.com/blang/semver/v4"
 	constants2 "github.com/crawlab-team/crawlab-core/constants"
 	entity2 "github.com/crawlab-team/crawlab-core/entity"
@@ -19,8 +22,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"sync"
-	"time"
 )
 
 type IBaseLangService interface {
@@ -518,7 +519,7 @@ func (svc *BaseLangService) SaveDependencyList(msg *grpc.StreamMessage, msgData 
 		}
 
 		// new dependencies
-		var depsNew []interface{}
+		var depsNew []any
 		for _, d := range deps {
 			depDb, ok := depsDbMap[d.Name]
 			if !ok {

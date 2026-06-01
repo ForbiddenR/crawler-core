@@ -2,7 +2,8 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/crawlab-team/crawlab-grpc"
+
+	grpc "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
 )
 
@@ -21,7 +22,7 @@ func HandleSuccess() (res *grpc.Response, err error) {
 	}, nil
 }
 
-func HandleSuccessWithData(data interface{}) (res *grpc.Response, err error) {
+func HandleSuccessWithData(data any) (res *grpc.Response, err error) {
 	var bytes []byte
 	switch data.(type) {
 	case []byte:
@@ -39,7 +40,7 @@ func HandleSuccessWithData(data interface{}) (res *grpc.Response, err error) {
 	}, nil
 }
 
-func HandleSuccessWithListData(data interface{}, total int) (res *grpc.Response, err error) {
+func HandleSuccessWithListData(data any, total int) (res *grpc.Response, err error) {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return HandleError(err)

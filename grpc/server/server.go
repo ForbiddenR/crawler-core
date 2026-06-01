@@ -3,6 +3,10 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"go/types"
+	"net"
+	"sync"
+
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -13,15 +17,12 @@ import (
 	"github.com/crawlab-team/crawlab-core/node/config"
 	grpc2 "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
-	"github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
-	"github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/spf13/viper"
 	"go.uber.org/dig"
-	"go/types"
 	"google.golang.org/grpc"
-	"net"
-	"sync"
 )
 
 var subs = sync.Map{}
@@ -151,7 +152,7 @@ func (svr *Server) SendStreamMessage(key string, code grpc2.StreamMessageCode) (
 	return svr.SendStreamMessageWithData(key, code, nil)
 }
 
-func (svr *Server) SendStreamMessageWithData(key string, code grpc2.StreamMessageCode, d interface{}) (err error) {
+func (svr *Server) SendStreamMessageWithData(key string, code grpc2.StreamMessageCode, d any) (err error) {
 	var data []byte
 	switch d.(type) {
 	case types.Nil:
@@ -181,7 +182,7 @@ func (svr *Server) IsStopped() (res bool) {
 	return svr.stopped
 }
 
-func (svr *Server) recoveryHandlerFunc(p interface{}) (err error) {
+func (svr *Server) recoveryHandlerFunc(p any) (err error) {
 	err = errors.NewError(errors.ErrorPrefixGrpc, fmt.Sprintf("%v", p))
 	trace.PrintError(err)
 	return err

@@ -2,11 +2,12 @@ package server
 
 import (
 	"encoding/json"
+
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
-	"github.com/crawlab-team/crawlab-grpc"
+	grpc "github.com/crawlab-team/crawlab-grpc"
 )
 
 func NewModelDelegateBinder(req *grpc.Request) (b *ModelDelegateBinder) {
@@ -21,7 +22,7 @@ type ModelDelegateBinder struct {
 	msg interfaces.GrpcModelDelegateMessage
 }
 
-func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
+func (b *ModelDelegateBinder) Bind() (res any, err error) {
 	if err := b.bindDelegateMessage(); err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
 	}
 }
 
-func (b *ModelDelegateBinder) MustBind() (res interface{}) {
+func (b *ModelDelegateBinder) MustBind() (res any) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)
@@ -98,7 +99,7 @@ func (b *ModelDelegateBinder) MustBind() (res interface{}) {
 	return res
 }
 
-func (b *ModelDelegateBinder) BindWithDelegateMessage() (res interface{}, msg interfaces.GrpcModelDelegateMessage, err error) {
+func (b *ModelDelegateBinder) BindWithDelegateMessage() (res any, msg interfaces.GrpcModelDelegateMessage, err error) {
 	if err := json.Unmarshal(b.req.Data, b.msg); err != nil {
 		return nil, nil, err
 	}
@@ -109,7 +110,7 @@ func (b *ModelDelegateBinder) BindWithDelegateMessage() (res interface{}, msg in
 	return res, b.msg, nil
 }
 
-func (b *ModelDelegateBinder) process(d interface{}, fieldIds ...interfaces.ModelId) (res interface{}, err error) {
+func (b *ModelDelegateBinder) process(d any, fieldIds ...interfaces.ModelId) (res any, err error) {
 	if err := json.Unmarshal(b.msg.GetData(), d); err != nil {
 		return nil, err
 	}
