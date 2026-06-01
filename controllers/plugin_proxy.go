@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -65,7 +65,7 @@ func (ctx *pluginProxyContext) do(c *gin.Context) {
 	// body data
 	var data []byte
 	if c.Request.Method != http.MethodGet {
-		data, err = ioutil.ReadAll(c.Request.Body)
+		data, err = io.ReadAll(c.Request.Body)
 		if err != nil {
 			HandleErrorInternalServerError(c, err)
 			return
@@ -112,7 +112,7 @@ func (ctx *pluginProxyContext) _doHttp(c *gin.Context, p *models.Plugin, data []
 
 func (ctx *pluginProxyContext) _doGrpc(c *gin.Context, p *models.Plugin, data []byte) {
 	// content
-	data, err := ioutil.ReadAll(c.Request.Body)
+	data, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
 		return

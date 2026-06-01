@@ -35,7 +35,7 @@ func TestPluginProxyController_Http(t *testing.T) {
 			controllers.HandleErrorInternalServerError(c, err)
 			return
 		}
-		controllers.HandleSuccessWithData(c, map[string]interface{}{
+		controllers.HandleSuccessWithData(c, map[string]any{
 			"path": path,
 			"p":    p,
 		})

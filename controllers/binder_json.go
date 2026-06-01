@@ -83,7 +83,7 @@ func (b *JsonBinder) Bind(c *gin.Context) (res interfaces.Model, err error) {
 	}
 }
 
-func (b *JsonBinder) BindList(c *gin.Context) (res interface{}, err error) {
+func (b *JsonBinder) BindList(c *gin.Context) (res any, err error) {
 	// declare
 	m := models.NewModelListMap()
 

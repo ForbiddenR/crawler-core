@@ -25,7 +25,8 @@ import (
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
 	"io"
-	"io/ioutil"
+	"os"
+
 	"math"
 	"net/http"
 	"path"
@@ -928,7 +929,7 @@ func (ctx *spiderContext) _getListWithStats(c *gin.Context) {
 	}
 
 	// iterate list again
-	var data []interface{}
+	var data []any
 	for _, d := range l.GetModels() {
 		s := d.(*models.Spider)
 
@@ -1063,7 +1064,7 @@ func (ctx *spiderContext) _getGitIgnore(fsSvc interfaces.SpiderFsService) (ignor
 	if !utils.Exists(filePath) {
 		return nil, nil
 	}
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, trace.TraceError(err)
 	}

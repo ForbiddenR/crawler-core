@@ -377,7 +377,7 @@ func (ctx *pluginContext) getListWithStatus(c *gin.Context) {
 	}
 
 	// data
-	var data []interface{}
+	var data []any
 	for _, d := range list.GetModels() {
 		p := d.(*models.Plugin)
 		s, ok := dict[p.GetId()]
