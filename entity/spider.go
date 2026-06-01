@@ -6,9 +6,9 @@ type SpiderType struct {
 }
 
 type ScrapySettingParam struct {
-	Key   string      `json:"key"`
-	Value interface{} `json:"value"`
-	Type  string      `json:"type"`
+	Key   string `json:"key"`
+	Value any    `json:"value"`
+	Type  string `json:"type"`
 }
 
 type ScrapyItem struct {

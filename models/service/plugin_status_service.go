@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypePluginStatus(d interface{}, err error) (res *models2.PluginStatus, err2 error) {
+func convertTypePluginStatus(d any, err error) (res *models2.PluginStatus, err2 error) {
 	if err != nil {
 		return nil, err
 	}

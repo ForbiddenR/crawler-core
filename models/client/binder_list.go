@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -86,7 +87,7 @@ func (b *ListBinder) Bind() (l interfaces.List, err error) {
 	}
 }
 
-func (b *ListBinder) MustBind() (res interface{}) {
+func (b *ListBinder) MustBind() (res any) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)
@@ -94,7 +95,7 @@ func (b *ListBinder) MustBind() (res interface{}) {
 	return res
 }
 
-func (b *ListBinder) Process(d interface{}) (l interfaces.List, err error) {
+func (b *ListBinder) Process(d any) (l interfaces.List, err error) {
 	if err := json.Unmarshal(b.res.Data, d); err != nil {
 		return l, trace.TraceError(err)
 	}

@@ -13,6 +13,6 @@ func (c *Color) GetName() string {
 	return c.Name
 }
 
-func (c *Color) Value() interface{} {
+func (c *Color) Value() any {
 	return c
 }

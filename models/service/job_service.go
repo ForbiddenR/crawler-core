@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeJob(d interface{}, err error) (res *models2.Job, err2 error) {
+func convertTypeJob(d any, err error) (res *models2.Job, err2 error) {
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeSchedule(d interface{}, err error) (res *models2.Schedule, err2 error) {
+func convertTypeSchedule(d any, err error) (res *models2.Schedule, err2 error) {
 	if err != nil {
 		return nil, err
 	}

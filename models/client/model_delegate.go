@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
@@ -175,7 +176,7 @@ func (d *ModelDelegate) Close() (err error) {
 	return d.c.Stop()
 }
 
-func (d *ModelDelegate) ToBytes(m interface{}) (bytes []byte, err error) {
+func (d *ModelDelegate) ToBytes(m any) (bytes []byte, err error) {
 	if m != nil {
 		return utils.JsonToBytes(m)
 	}

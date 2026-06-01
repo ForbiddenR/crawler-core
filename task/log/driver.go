@@ -1,6 +1,6 @@
 package log
 
-func GetLogDriver(logDriverType string, options interface{}) (driver Driver, err error) {
+func GetLogDriver(logDriverType string, options any) (driver Driver, err error) {
 	switch logDriverType {
 	case DriverTypeFile:
 		if options == nil {

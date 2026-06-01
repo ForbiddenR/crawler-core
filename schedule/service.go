@@ -1,6 +1,9 @@
 package schedule
 
 import (
+	"sync"
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
@@ -13,8 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/dig"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -88,7 +89,7 @@ func (svc *Service) Stop() {
 	svc.cron.Stop()
 }
 
-func (svc *Service) Enable(s interfaces.Schedule, args ...interface{}) (err error) {
+func (svc *Service) Enable(s interfaces.Schedule, args ...any) (err error) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
@@ -102,7 +103,7 @@ func (svc *Service) Enable(s interfaces.Schedule, args ...interface{}) (err erro
 	return delegate.NewModelDelegate(s, u).Save()
 }
 
-func (svc *Service) Disable(s interfaces.Schedule, args ...interface{}) (err error) {
+func (svc *Service) Disable(s interfaces.Schedule, args ...any) (err error) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 

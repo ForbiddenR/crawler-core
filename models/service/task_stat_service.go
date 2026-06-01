@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeTaskStat(d interface{}, err error) (res *models2.TaskStat, err2 error) {
+func convertTypeTaskStat(d any, err error) (res *models2.TaskStat, err2 error) {
 	if err != nil {
 		return nil, err
 	}

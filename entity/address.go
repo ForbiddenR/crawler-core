@@ -19,7 +19,7 @@ func (a *Address) IsEmpty() (res bool) {
 	return a.Host == "" || a.Port == ""
 }
 
-func (a *Address) Value() (res interface{}) {
+func (a *Address) Value() (res any) {
 	return a
 }
 

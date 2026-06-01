@@ -13,7 +13,7 @@ type ColNameBinder struct {
 	id interfaces.ModelId
 }
 
-func (b *ColNameBinder) Bind() (res interface{}, err error) {
+func (b *ColNameBinder) Bind() (res any, err error) {
 	switch b.id {
 	// system models
 	case interfaces.ModelIdArtifact:
@@ -79,7 +79,7 @@ func (b *ColNameBinder) Bind() (res interface{}, err error) {
 	}
 }
 
-func (b *ColNameBinder) MustBind() (res interface{}) {
+func (b *ColNameBinder) MustBind() (res any) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)

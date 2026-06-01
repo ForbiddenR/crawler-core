@@ -3,6 +3,11 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	config2 "github.com/crawlab-team/crawlab-core/config"
@@ -19,10 +24,6 @@ import (
 	"go.uber.org/dig"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
-	"io"
-	"os"
-	"sync"
-	"time"
 )
 
 type Client struct {
@@ -179,14 +180,14 @@ func (c *Client) Context() (ctx context.Context, cancel context.CancelFunc) {
 	return context.WithTimeout(context.Background(), c.timeout)
 }
 
-func (c *Client) NewRequest(d interface{}) (req *grpc2.Request) {
+func (c *Client) NewRequest(d any) (req *grpc2.Request) {
 	return &grpc2.Request{
 		NodeKey: c.nodeCfgSvc.GetNodeKey(),
 		Data:    c.getRequestData(d),
 	}
 }
 
-func (c *Client) NewPluginRequest(d interface{}) (req *grpc2.PluginRequest) {
+func (c *Client) NewPluginRequest(d any) (req *grpc2.PluginRequest) {
 	return &grpc2.PluginRequest{
 		Name:    os.Getenv("CRAWLAB_PLUGIN_NAME"),
 		NodeKey: c.nodeCfgSvc.GetNodeKey(),
@@ -381,7 +382,7 @@ func (c *Client) needRestart() bool {
 	}
 }
 
-func (c *Client) getRequestData(d interface{}) (data []byte) {
+func (c *Client) getRequestData(d any) (data []byte) {
 	if d == nil {
 		return data
 	}

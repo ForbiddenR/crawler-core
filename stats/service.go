@@ -12,7 +12,7 @@ import (
 type Service struct {
 }
 
-func (svc *Service) GetOverviewStats(query bson.M) (data interface{}, err error) {
+func (svc *Service) GetOverviewStats(query bson.M) (data any, err error) {
 	stats := bson.M{}
 
 	// nodes
@@ -90,7 +90,7 @@ func (svc *Service) GetOverviewStats(query bson.M) (data interface{}, err error)
 	return stats, nil
 }
 
-func (svc *Service) GetDailyStats(query bson.M) (data interface{}, err error) {
+func (svc *Service) GetDailyStats(query bson.M) (data any, err error) {
 	tasksStats, err := svc.getDailyTasksStats(query)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (svc *Service) GetDailyStats(query bson.M) (data interface{}, err error) {
 	return tasksStats, nil
 }
 
-func (svc *Service) GetTaskStats(query bson.M) (data interface{}, err error) {
+func (svc *Service) GetTaskStats(query bson.M) (data any, err error) {
 	stats := bson.M{}
 
 	// by status
@@ -122,7 +122,7 @@ func (svc *Service) GetTaskStats(query bson.M) (data interface{}, err error) {
 	return stats, nil
 }
 
-func (svc *Service) getDailyTasksStats(query bson.M) (data interface{}, err error) {
+func (svc *Service) getDailyTasksStats(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -167,7 +167,7 @@ func (svc *Service) getDailyTasksStats(query bson.M) (data interface{}, err erro
 	return results, nil
 }
 
-func (svc *Service) getOverviewResults(query bson.M) (data interface{}, err error) {
+func (svc *Service) getOverviewResults(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -185,7 +185,7 @@ func (svc *Service) getOverviewResults(query bson.M) (data interface{}, err erro
 	return res["results"], nil
 }
 
-func (svc *Service) getTaskStatsByStatus(query bson.M) (data interface{}, err error) {
+func (svc *Service) getTaskStatsByStatus(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -210,7 +210,7 @@ func (svc *Service) getTaskStatsByStatus(query bson.M) (data interface{}, err er
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsByNode(query bson.M) (data interface{}, err error) {
+func (svc *Service) getTaskStatsByNode(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -246,7 +246,7 @@ func (svc *Service) getTaskStatsByNode(query bson.M) (data interface{}, err erro
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsBySpider(query bson.M) (data interface{}, err error) {
+func (svc *Service) getTaskStatsBySpider(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -283,7 +283,7 @@ func (svc *Service) getTaskStatsBySpider(query bson.M) (data interface{}, err er
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsHistogram(query bson.M) (data interface{}, err error) {
+func (svc *Service) getTaskStatsHistogram(query bson.M) (data any, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{

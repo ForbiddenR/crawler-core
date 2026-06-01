@@ -3,6 +3,9 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"strings"
+
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/entity"
@@ -21,8 +24,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"io"
-	"strings"
 )
 
 type TaskServer struct {
@@ -116,7 +117,7 @@ func (svr TaskServer) handleInsertData(msg *grpc.StreamMessage) (err error) {
 	if err != nil {
 		return err
 	}
-	var records []interface{}
+	var records []any
 	for _, d := range data.Records {
 		res, ok := d[constants.TaskKey]
 		if ok {

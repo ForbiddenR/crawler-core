@@ -2,6 +2,9 @@ package delegate
 
 import (
 	"encoding/json"
+	"reflect"
+	"time"
+
 	errors2 "github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/event"
 	"github.com/crawlab-team/crawlab-core/interfaces"
@@ -13,11 +16,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"reflect"
-	"time"
 )
 
-func NewModelDelegate(doc interfaces.Model, args ...interface{}) interfaces.ModelDelegate {
+func NewModelDelegate(doc interfaces.Model, args ...any) interfaces.ModelDelegate {
 	switch doc.(type) {
 	case *models.Artifact:
 		return newModelDelegate(interfaces.ModelIdArtifact, doc, args...)
@@ -81,7 +82,7 @@ func NewModelDelegate(doc interfaces.Model, args ...interface{}) interfaces.Mode
 	}
 }
 
-func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, args ...interface{}) interfaces.ModelDelegate {
+func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, args ...any) interfaces.ModelDelegate {
 	// user
 	u := utils.GetUserFromArgs(args...)
 
@@ -145,7 +146,7 @@ func (d *ModelDelegate) GetModel() (res interfaces.Model) {
 	return d.doc
 }
 
-func (d *ModelDelegate) ToBytes(m interface{}) (bytes []byte, err error) {
+func (d *ModelDelegate) ToBytes(m any) (bytes []byte, err error) {
 	if m != nil {
 		return utils.JsonToBytes(m)
 	}

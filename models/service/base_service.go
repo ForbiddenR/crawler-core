@@ -2,6 +2,11 @@ package service
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/errors"
@@ -13,10 +18,6 @@ import (
 	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"reflect"
-	"strings"
-	"sync"
-	"time"
 )
 
 type BaseService struct {
@@ -71,35 +72,35 @@ func (svc *BaseService) GetList(query bson.M, opts *mongo.FindOptions) (l interf
 	return NewListBinder(svc.id, fr).Bind()
 }
 
-func (svc *BaseService) DeleteById(id primitive.ObjectID, args ...interface{}) (err error) {
+func (svc *BaseService) DeleteById(id primitive.ObjectID, args ...any) (err error) {
 	return svc.deleteId(id, args...)
 }
 
-func (svc *BaseService) Delete(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) Delete(query bson.M, args ...any) (err error) {
 	return svc.delete(query)
 }
 
-func (svc *BaseService) DeleteList(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) DeleteList(query bson.M, args ...any) (err error) {
 	return svc.deleteList(query)
 }
 
-func (svc *BaseService) ForceDeleteList(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) ForceDeleteList(query bson.M, args ...any) (err error) {
 	return svc.forceDeleteList(query)
 }
 
-func (svc *BaseService) UpdateById(id primitive.ObjectID, update bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) UpdateById(id primitive.ObjectID, update bson.M, args ...any) (err error) {
 	return svc.updateId(id, update)
 }
 
-func (svc *BaseService) Update(query bson.M, update bson.M, fields []string, args ...interface{}) (err error) {
+func (svc *BaseService) Update(query bson.M, update bson.M, fields []string, args ...any) (err error) {
 	return svc.update(query, update, fields)
 }
 
-func (svc *BaseService) UpdateDoc(query bson.M, doc interfaces.Model, fields []string, args ...interface{}) (err error) {
+func (svc *BaseService) UpdateDoc(query bson.M, doc interfaces.Model, fields []string, args ...any) (err error) {
 	return svc.update(query, doc, fields)
 }
 
-func (svc *BaseService) Insert(u interfaces.User, docs ...interface{}) (err error) {
+func (svc *BaseService) Insert(u interfaces.User, docs ...any) (err error) {
 	log.Debugf("baseService.Insert -> svc.col.GetName(): %v", svc.col.GetName())
 	log.Debugf("baseService.Insert -> docs: %v", docs)
 	return svc.insert(u, docs...)
@@ -123,7 +124,7 @@ func (svc *BaseService) find(query bson.M, opts *mongo.FindOptions) (fr *mongo.F
 	return svc.col.Find(query, opts)
 }
 
-func (svc *BaseService) deleteId(id primitive.ObjectID, args ...interface{}) (err error) {
+func (svc *BaseService) deleteId(id primitive.ObjectID, args ...any) (err error) {
 	if svc.col == nil {
 		return trace.TraceError(constants.ErrMissingCol)
 	}
@@ -135,7 +136,7 @@ func (svc *BaseService) deleteId(id primitive.ObjectID, args ...interface{}) (er
 	return delegate.NewModelDelegate(doc, svc._getUserFromArgs(args...)).Delete()
 }
 
-func (svc *BaseService) delete(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) delete(query bson.M, args ...any) (err error) {
 	if svc.col == nil {
 		return trace.TraceError(constants.ErrMissingCol)
 	}
@@ -146,7 +147,7 @@ func (svc *BaseService) delete(query bson.M, args ...interface{}) (err error) {
 	return svc.deleteId(doc.Id, svc._getUserFromArgs(args...))
 }
 
-func (svc *BaseService) deleteList(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) deleteList(query bson.M, args ...any) (err error) {
 	if svc.col == nil {
 		return trace.TraceError(constants.ErrMissingCol)
 	}
@@ -163,7 +164,7 @@ func (svc *BaseService) deleteList(query bson.M, args ...interface{}) (err error
 	return nil
 }
 
-func (svc *BaseService) forceDeleteList(query bson.M, args ...interface{}) (err error) {
+func (svc *BaseService) forceDeleteList(query bson.M, args ...any) (err error) {
 	return svc.col.Delete(query)
 }
 
@@ -174,7 +175,7 @@ func (svc *BaseService) count(query bson.M) (total int, err error) {
 	return svc.col.Count(query)
 }
 
-func (svc *BaseService) update(query bson.M, update interface{}, fields []string, args ...interface{}) (err error) {
+func (svc *BaseService) update(query bson.M, update any, fields []string, args ...any) (err error) {
 	update, err = svc._getUpdateBsonM(update, fields)
 	if err != nil {
 		return err
@@ -182,7 +183,7 @@ func (svc *BaseService) update(query bson.M, update interface{}, fields []string
 	return svc._update(query, update, svc._getUserFromArgs(args...))
 }
 
-func (svc *BaseService) updateId(id primitive.ObjectID, update interface{}, args ...interface{}) (err error) {
+func (svc *BaseService) updateId(id primitive.ObjectID, update any, args ...any) (err error) {
 	update, err = svc._getUpdateBsonM(update, nil)
 	if err != nil {
 		return err
@@ -190,7 +191,7 @@ func (svc *BaseService) updateId(id primitive.ObjectID, update interface{}, args
 	return svc._updateById(id, update, svc._getUserFromArgs(args...))
 }
 
-func (svc *BaseService) insert(u interfaces.User, docs ...interface{}) (err error) {
+func (svc *BaseService) insert(u interfaces.User, docs ...any) (err error) {
 	// validate col
 	if svc.col == nil {
 		return trace.TraceError(constants.ErrMissingCol)
@@ -199,9 +200,9 @@ func (svc *BaseService) insert(u interfaces.User, docs ...interface{}) (err erro
 	// iterate docs
 	for i, doc := range docs {
 		switch doc.(type) {
-		case map[string]interface{}:
-			// doc type: map[string]interface{}, need to handle _id
-			d := doc.(map[string]interface{})
+		case map[string]any:
+			// doc type: map[string]any, need to handle _id
+			d := doc.(map[string]any)
 			vId, ok := d["_id"]
 			if !ok {
 				// _id not exists
@@ -253,7 +254,7 @@ func (svc *BaseService) insert(u interfaces.User, docs ...interface{}) (err erro
 	return nil
 }
 
-func (svc *BaseService) _update(query bson.M, update interface{}, args ...interface{}) (err error) {
+func (svc *BaseService) _update(query bson.M, update any, args ...any) (err error) {
 	// ids of query
 	var ids []primitive.ObjectID
 	list, err := NewListBinder(svc.id, svc.find(query, nil)).Bind()
@@ -274,7 +275,7 @@ func (svc *BaseService) _update(query bson.M, update interface{}, args ...interf
 	return mongo.GetMongoCol(interfaces.ModelColNameArtifact).Update(query, svc._getUpdateArtifactUpdate(u))
 }
 
-func (svc *BaseService) _updateById(id primitive.ObjectID, update interface{}, args ...interface{}) (err error) {
+func (svc *BaseService) _updateById(id primitive.ObjectID, update any, args ...any) (err error) {
 	// update model object
 	if err := svc.col.UpdateId(id, update); err != nil {
 		return err
@@ -285,7 +286,7 @@ func (svc *BaseService) _updateById(id primitive.ObjectID, update interface{}, a
 	return mongo.GetMongoCol(interfaces.ModelColNameArtifact).UpdateId(id, svc._getUpdateArtifactUpdate(u))
 }
 
-func (svc *BaseService) _getUpdateBsonM(update interface{}, fields []string) (res bson.M, err error) {
+func (svc *BaseService) _getUpdateBsonM(update any, fields []string) (res bson.M, err error) {
 	switch update.(type) {
 	case interfaces.Model:
 		// convert to bson.M
@@ -357,7 +358,7 @@ func (svc *BaseService) _getUpdateArtifactUpdate(u interfaces.User) (res bson.M)
 	}
 }
 
-func (svc *BaseService) _getUserFromArgs(args ...interface{}) (u interfaces.User) {
+func (svc *BaseService) _getUserFromArgs(args ...any) (u interfaces.User) {
 	return utils.GetUserFromArgs(args...)
 }
 

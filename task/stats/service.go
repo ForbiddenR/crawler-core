@@ -1,6 +1,9 @@
 package stats
 
 import (
+	"sync"
+	"time"
+
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/service"
@@ -13,8 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/dig"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -35,7 +36,7 @@ func (svc *Service) Init() (err error) {
 	return nil
 }
 
-func (svc *Service) InsertData(id primitive.ObjectID, records ...interface{}) (err error) {
+func (svc *Service) InsertData(id primitive.ObjectID, records ...any) (err error) {
 	resultSvc, err := svc.getResultService(id)
 	if err != nil {
 		return err
@@ -98,7 +99,7 @@ func (svc *Service) cleanup() {
 		// atomic operation
 		svc.mu.Lock()
 
-		svc.resultServices.Range(func(key, value interface{}) bool {
+		svc.resultServices.Range(func(key, value any) bool {
 			rs := value.(interfaces.ResultService)
 			if time.Now().After(rs.GetTime().Add(svc.rsTtl)) {
 				svc.resultServices.Delete(key)

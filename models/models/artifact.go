@@ -11,7 +11,7 @@ type Artifact struct {
 	Del    bool                 `bson:"_del" json:"_del"`
 	TagIds []primitive.ObjectID `bson:"_tid" json:"_tid"`
 	Sys    *ArtifactSys         `bson:"_sys" json:"_sys"`
-	Obj    interface{}          `bson:"_obj" json:"_obj"`
+	Obj    any                  `bson:"_obj" json:"_obj"`
 }
 
 func (a *Artifact) GetId() (id primitive.ObjectID) {

@@ -5,6 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
@@ -31,15 +41,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"runtime"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -316,7 +317,7 @@ func (svc *Service) StopPlugin(id primitive.ObjectID) (err error) {
 	return nil
 }
 
-func (svc *Service) GetPublicPluginList() (res interface{}, err error) {
+func (svc *Service) GetPublicPluginList() (res any, err error) {
 	// get from db cache
 	fn := svc._getPublicPluginList
 	s, err := utils.GetFromDbCache(constants.CacheKeyPublicPlugins, fn)
@@ -333,7 +334,7 @@ func (svc *Service) GetPublicPluginList() (res interface{}, err error) {
 	return repos, nil
 }
 
-func (svc *Service) GetPublicPluginInfo(fullName string) (res interface{}, err error) {
+func (svc *Service) GetPublicPluginInfo(fullName string) (res any, err error) {
 	// get from db cache
 	fn := func() (string, error) {
 		return svc._getPublicPluginInfo(fullName)
@@ -890,7 +891,7 @@ func (svc *Service) _getPublicPluginInfo(fullName string) (res string, err error
 	var errs multierror.Errors
 
 	// repo
-	var repo interface{}
+	var repo any
 	go func() {
 		var err error
 		repo, err = svc.getPublicPluginRepo(fullName)
@@ -901,7 +902,7 @@ func (svc *Service) _getPublicPluginInfo(fullName string) (res string, err error
 	}()
 
 	// plugin.json
-	var pluginJson interface{}
+	var pluginJson any
 	go func() {
 		var err error
 		pluginJson, err = svc.getPublicPluginPluginJson(fullName)

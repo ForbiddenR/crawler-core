@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeGit(d interface{}, err error) (res *models2.Git, err2 error) {
+func convertTypeGit(d any, err error) (res *models2.Git, err2 error) {
 	if err != nil {
 		return nil, err
 	}

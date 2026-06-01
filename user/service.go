@@ -1,6 +1,8 @@
 package user
 
 import (
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
@@ -15,7 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/dig"
-	"time"
 )
 
 type Service struct {
@@ -50,7 +51,7 @@ func (svc *Service) SetJwtSigningMethod(method jwt.SigningMethod) {
 	svc.jwtSigningMethod = method
 }
 
-func (svc *Service) Create(opts *interfaces.UserCreateOptions, args ...interface{}) (err error) {
+func (svc *Service) Create(opts *interfaces.UserCreateOptions, args ...any) (err error) {
 	actor := utils.GetUserFromArgs(args...)
 
 	// validate options
@@ -119,7 +120,7 @@ func (svc *Service) CheckToken(tokenStr string) (u interfaces.User, err error) {
 	return svc.checkToken(tokenStr)
 }
 
-func (svc *Service) ChangePassword(id primitive.ObjectID, password string, args ...interface{}) (err error) {
+func (svc *Service) ChangePassword(id primitive.ObjectID, password string, args ...any) (err error) {
 	actor := utils.GetUserFromArgs(args...)
 
 	p, err := svc.modelSvc.GetPasswordById(id)
@@ -196,7 +197,7 @@ func (svc *Service) checkToken(tokenStr string) (user interfaces.User, err error
 }
 
 func (svc *Service) getSecretFunc() jwt.Keyfunc {
-	return func(token *jwt.Token) (interface{}, error) {
+	return func(token *jwt.Token) (any, error) {
 		return []byte(svc.jwtSecret), nil
 	}
 }

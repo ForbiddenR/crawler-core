@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeUserRole(d interface{}, err error) (res *models2.UserRole, err2 error) {
+func convertTypeUserRole(d any, err error) (res *models2.UserRole, err2 error) {
 	if err != nil {
 		return nil, err
 	}

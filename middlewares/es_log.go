@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/olivere/elastic/v7"
-	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/olivere/elastic/v7"
+	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 )
 
 func EsLog(ctx context.Context, esClient *elastic.Client) gin.HandlerFunc {
@@ -42,7 +43,7 @@ func EsLog(ctx context.Context, esClient *elastic.Client) gin.HandlerFunc {
 
 // WriteMsg will write the msg and level into es
 func WriteMsg(ctx context.Context, crawlabIndex string, es *elastic.Client, when time.Time, msg string) error {
-	vals := make(map[string]interface{})
+	vals := make(map[string]any)
 	vals["@timestamp"] = when.Format(time.RFC3339)
 	vals["@msg"] = msg
 	uid := uuid.NewV4().String()

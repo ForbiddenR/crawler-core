@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -13,7 +15,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 )
 
 func GetElasticsearchClient(ds *models.DataSource) (c *elasticsearch.Client, err error) {
@@ -106,10 +107,10 @@ func getElasticsearchClient(ctx context.Context, ds *models.DataSource) (c *elas
 }
 
 func GetElasticsearchQuery(query generic.ListQuery) (buf *bytes.Buffer) {
-	q := map[string]interface{}{}
+	q := map[string]any{}
 	if len(query) > 0 {
 		match := getElasticsearchQueryMatch(query)
-		q["query"] = map[string]interface{}{
+		q["query"] = map[string]any{
 			"match": match,
 		}
 	}
@@ -121,14 +122,14 @@ func GetElasticsearchQuery(query generic.ListQuery) (buf *bytes.Buffer) {
 }
 
 func GetElasticsearchQueryWithOptions(query generic.ListQuery, opts *generic.ListOptions) (buf *bytes.Buffer) {
-	q := map[string]interface{}{
+	q := map[string]any{
 		"size": opts.Limit,
 		"from": opts.Skip,
 		// TODO: sort
 	}
 	if len(query) > 0 {
 		match := getElasticsearchQueryMatch(query)
-		q["query"] = map[string]interface{}{
+		q["query"] = map[string]any{
 			"match": match,
 		}
 	}
@@ -139,8 +140,8 @@ func GetElasticsearchQueryWithOptions(query generic.ListQuery, opts *generic.Lis
 	return buf
 }
 
-func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]interface{}) {
-	match = map[string]interface{}{}
+func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]any) {
+	match = map[string]any{}
 	for _, c := range query {
 		switch c.Value.(type) {
 		case primitive.ObjectID:
@@ -150,7 +151,7 @@ func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]inter
 		case generic.OpEqual:
 			match[c.Key] = c.Value
 		default:
-			match[c.Key] = map[string]interface{}{
+			match[c.Key] = map[string]any{
 				c.Op: c.Value,
 			}
 		}

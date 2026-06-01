@@ -1,6 +1,8 @@
 package result
 
 import (
+	"time"
+
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -13,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 type ServiceMongo struct {
@@ -27,7 +28,7 @@ type ServiceMongo struct {
 	t     time.Time
 }
 
-func (svc *ServiceMongo) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
+func (svc *ServiceMongo) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
 	_query := svc.getQuery(query)
 	_opts := svc.getOpts(opts)
 	return svc.getList(_query, _opts)
@@ -38,7 +39,7 @@ func (svc *ServiceMongo) Count(query generic.ListQuery) (n int, err error) {
 	return svc.modelColSvc.Count(_query)
 }
 
-func (svc *ServiceMongo) Insert(docs ...interface{}) (err error) {
+func (svc *ServiceMongo) Insert(docs ...any) (err error) {
 	if svc.dc.Dedup.Enabled {
 		for _, doc := range docs {
 			hash, err := utils.GetResultHash(doc, svc.dc.Dedup.Keys)
@@ -94,7 +95,7 @@ func (svc *ServiceMongo) GetTime() (t time.Time) {
 	return svc.t
 }
 
-func (svc *ServiceMongo) getList(query bson.M, opts *mongo.FindOptions) (results []interface{}, err error) {
+func (svc *ServiceMongo) getList(query bson.M, opts *mongo.FindOptions) (results []any, err error) {
 	list, err := svc.modelColSvc.GetList(query, opts)
 	if err != nil {
 		return nil, err

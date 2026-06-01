@@ -5,6 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"os/exec"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/env/deps/constants"
 	"github.com/crawlab-team/crawlab-core/env/deps/entity"
@@ -22,11 +28,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/dig"
-	"io"
-	"os/exec"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Service struct {
@@ -166,7 +167,7 @@ func (svc *Service) initData() (err error) {
 			Enabled:     true,
 		},
 	}
-	var data []interface{}
+	var data []any
 	for _, s := range settings {
 		data = append(data, s)
 	}

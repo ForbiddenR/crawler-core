@@ -16,7 +16,7 @@ func StringArrayContains(arr []string, str string) bool {
 	return false
 }
 
-func GetArrayItems(array interface{}) (res []interface{}, err error) {
+func GetArrayItems(array any) (res []any, err error) {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Slice, reflect.Array:
 		s := reflect.ValueOf(array)
@@ -30,7 +30,7 @@ func GetArrayItems(array interface{}) (res []interface{}, err error) {
 	return res, nil
 }
 
-func ShuffleArray(slice []interface{}) (err error) {
+func ShuffleArray(slice []any) (err error) {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	for len(slice) > 0 {
 		n := len(slice)
