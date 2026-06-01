@@ -261,8 +261,7 @@ func (ctx *taskContext) getListWithStats(c *gin.Context) {
 	// ids
 	var ids []primitive.ObjectID
 	for _, d := range list.GetModels() {
-		t := d.(interfaces.Model)
-		ids = append(ids, t.GetId())
+		ids = append(ids, d.GetId())
 	}
 
 	// total count
