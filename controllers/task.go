@@ -290,7 +290,7 @@ func (ctx *taskContext) getListWithStats(c *gin.Context) {
 	}
 
 	// iterate list again
-	var data []interface{}
+	var data []any
 	for _, d := range list.GetModels() {
 		t := d.(*models.Task)
 		s, ok := dict[t.GetId()]

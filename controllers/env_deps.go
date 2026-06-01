@@ -2,7 +2,8 @@ package controllers
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
+
 	"net/http"
 	"path"
 	"regexp"
@@ -490,7 +491,7 @@ func (ctx *envDepsContext) _getDependenciesRequirementsTxt(workspacePath string)
 	filePath := path.Join(workspacePath, constants.DependencyConfigRequirementsTxt)
 
 	// file content
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, trace.TraceError(err)
 	}
@@ -508,7 +509,7 @@ func (ctx *envDepsContext) _getDependenciesRequirementsTxt(workspacePath string)
 	var depNames []string
 
 	// iterate content lines
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		// trim space
 		line = strings.TrimSpace(line)
 
