@@ -258,12 +258,12 @@ func (svc *Service) StartPlugin(id primitive.ObjectID) (err error) {
 	// run (async)
 	go func() {
 		// start (async)
-		go func() {
-			if err := d.Start(); err != nil {
-				svc.handleCmdError(p, ps, err)
-				return
-			}
-		}()
+		// go func() {
+		// 	if err := d.Start(); err != nil {
+		// 		svc.handleCmdError(p, ps, err)
+		// 		return
+		// 	}
+		// }()
 
 		// listening to signal from daemon
 		stopped := false

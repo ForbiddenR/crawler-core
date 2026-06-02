@@ -2,11 +2,15 @@ package routes
 
 import (
 	"fmt"
-	"github.com/apex/log"
-	"github.com/crawlab-team/crawlab-core/controllers"
-	"github.com/gin-gonic/gin"
+	"io/fs"
 	"net/http"
 	"path"
+	"strings"
+
+	"github.com/apex/log"
+	"github.com/crawlab-team/crawlab-core/controllers"
+	"github.com/crawlab-team/crawlab-core/web"
+	"github.com/gin-gonic/gin"
 )
 
 type RouterServiceInterface interface {
@@ -89,6 +93,7 @@ func InitRoutes(app *gin.Engine) (err error) {
 	registerRoutesAnonymousGroup(svc, groups)
 	registerRoutesAuthGroup(svc, groups)
 	registerRoutesFilterGroup(svc, groups)
+	registerStaticRoutes(svc, groups)
 
 	return nil
 }
@@ -108,6 +113,73 @@ func registerRoutesAnonymousGroup(svc *RouterService, groups *RouterGroups) {
 
 	// demo
 	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/demo", controllers.DemoController)
+}
+
+func registerStaticRoutes(svc *RouterService, groups *RouterGroups) error {
+	distFS, err := web.DistFS()
+	if err != nil {
+		return err
+	}
+
+	svc.app.NoRoute(readHandler(distFS))
+	return nil
+}
+
+func readHandler(distFS fs.FS) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		p := strings.TrimPrefix(ctx.Request.URL.Path, "/")
+		p = path.Clean(p)
+
+		if p != "." {
+			if data, ok := readFile(distFS, p); ok {
+				ctx.Data(http.StatusOK, contentType(p), data)
+				return
+			}
+		}
+
+		index, err := fs.ReadFile(distFS, "index.html")
+		if err != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		ctx.Data(http.StatusOK, "text/html; charset=utf-8", index)
+	}
+}
+
+func readFile(distFS fs.FS, name string) ([]byte, bool) {
+	_, err := fs.Stat(distFS, name)
+	if err != nil {
+		return nil, false
+	}
+
+	data, err := fs.ReadFile(distFS, name)
+	if err != nil {
+		return nil, false
+	}
+	return data, true
+}
+
+func contentType(name string) string {
+	switch path.Ext(name) {
+	case ".html":
+		return "text/html; charset=utf-8"
+	case ".js":
+		return "text/javascript; charset=utf-8"
+	case ".css":
+		return "text/css; charset=utf-8"
+	case ".svg":
+		return "image/svg+xml"
+	case ".json":
+		return "application/json"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".ico":
+		return "image/x-icon"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
