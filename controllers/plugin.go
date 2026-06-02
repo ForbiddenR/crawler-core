@@ -91,43 +91,43 @@ type pluginContext struct {
 var _pluginCtx *pluginContext
 
 func (ctx *pluginContext) start(c *gin.Context) {
-	// id
-	id, err := primitive.ObjectIDFromHex(c.Param("id"))
-	if err != nil {
-		HandleErrorBadRequest(c, err)
-		return
-	}
+	// // id
+	// id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	// if err != nil {
+	// 	HandleErrorBadRequest(c, err)
+	// 	return
+	// }
 
-	// plugin
-	p, err := ctx.modelSvc.GetPluginById(id)
-	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
+	// // plugin
+	// p, err := ctx.modelSvc.GetPluginById(id)
+	// if err != nil {
+	// 	HandleErrorInternalServerError(c, err)
+	// 	return
+	// }
 
-	// start (master)
-	go func() {
-		if err := ctx.pluginSvc.StartPlugin(p.GetId()); err != nil {
-			trace.PrintError(err)
-			return
-		}
-	}()
+	// // start (master)
+	// go func() {
+	// 	if err := ctx.pluginSvc.StartPlugin(p.GetId()); err != nil {
+	// 		trace.PrintError(err)
+	// 		return
+	// 	}
+	// }()
 
-	// start (workers)
-	if p.DeployMode == constants.PluginDeployModeAll {
-		go func() {
-			// active worker nodes
-			nodes, err := ctx._getWorkerNodes()
-			if err != nil {
-				return
-			}
+	// // start (workers)
+	// if p.DeployMode == constants.PluginDeployModeAll {
+	// 	go func() {
+	// 		// active worker nodes
+	// 		nodes, err := ctx._getWorkerNodes()
+	// 		if err != nil {
+	// 			return
+	// 		}
 
-			// start on each worker node
-			for _, n := range nodes {
-				_ = ctx.svr.SendStreamMessageWithData("node:"+n.Key, grpc.StreamMessageCode_START_PLUGIN, p)
-			}
-		}()
-	}
+	// 		// start on each worker node
+	// 		for _, n := range nodes {
+	// 			_ = ctx.svr.SendStreamMessageWithData("node:"+n.Key, grpc.StreamMessageCode_START_PLUGIN, p)
+	// 		}
+	// 	}()
+	// }
 
 	HandleSuccess(c)
 }
