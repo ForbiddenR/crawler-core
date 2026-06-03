@@ -133,8 +133,8 @@ func (svc *PythonService) populateLatestVersions(deps []models.Dependency) {
 func (svc *PythonService) getDependencyResults(depNames []string) (depsResults []entity.DependencyResult, err error) {
 	pipelines := mongo2.Pipeline{
 		{{
-			"$match",
-			bson.M{
+			Key: "$match",
+			Value: bson.M{
 				"type": constants.DependencyTypePython,
 				"name": bson.M{
 					"$in": depNames,
@@ -142,8 +142,8 @@ func (svc *PythonService) getDependencyResults(depNames []string) (depsResults [
 			},
 		}},
 		{{
-			"$group",
-			bson.M{
+			Key: "$group",
+			Value: bson.M{
 				"_id": "$name",
 				"node_ids": bson.M{
 					"$push": "$node_id",
@@ -154,8 +154,8 @@ func (svc *PythonService) getDependencyResults(depNames []string) (depsResults [
 			},
 		}},
 		{{
-			"$project",
-			bson.M{
+			Key: "$project",
+			Value: bson.M{
 				"name":     "$_id",
 				"node_ids": "$node_ids",
 				"versions": "$versions",
