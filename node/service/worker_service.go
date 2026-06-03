@@ -95,7 +95,6 @@ func (svc *WorkerService) Register() {
 		panic(err)
 	}
 	log.Infof("worker[%s] registered to master. id: %s", svc.GetConfigService().GetNodeKey(), svc.n.GetId().Hex())
-	return
 }
 
 func (svc *WorkerService) Recv() {
