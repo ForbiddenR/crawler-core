@@ -24,9 +24,6 @@ type Server struct {
 	// modules
 	api *Api
 	dck *Docker
-
-	// internals
-	quit chan int
 }
 
 func (app *Server) SetGrpcAddress(address interfaces.Address) {
@@ -73,12 +70,19 @@ func (app *Server) Start() {
 }
 
 func (app *Server) Wait() {
-	<-app.quit
+	// <-app.quit
+	DefaultWait()
 }
 
 func (app *Server) Stop() {
-	app.api.Stop()
-	app.quit <- 1
+	if utils.IsMaster() {
+		if utils.IsDocker() {
+			app.dck.Stop()
+		}
+
+		app.api.Stop()
+	}
+	app.nodeSvc.Stop()
 }
 
 func (app *Server) logNodeInfo() {
@@ -100,7 +104,6 @@ func NewServer(opts ...ServerOption) (app ServerApp) {
 	// server
 	svr := &Server{
 		WithConfigPath: config.NewConfigPathService(),
-		quit:           make(chan int, 1),
 	}
 
 	// apply options
