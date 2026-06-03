@@ -3,7 +3,6 @@ module github.com/crawlab-team/crawlab-core
 go 1.26
 
 require (
-	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/ReneKroon/ttlcache v1.7.0
 	github.com/apex/log v1.9.0
 	github.com/blang/semver/v4 v4.0.0
@@ -55,6 +54,7 @@ require (
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
+	github.com/PuerkitoBio/goquery v1.12.0 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
