@@ -386,9 +386,9 @@ func (c *Client) getRequestData(d any) (data []byte) {
 	if d == nil {
 		return data
 	}
-	switch d.(type) {
+	switch d := d.(type) {
 	case []byte:
-		data = d.([]byte)
+		data = d
 	default:
 		var err error
 		data, err = json.Marshal(d)

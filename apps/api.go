@@ -75,10 +75,6 @@ func (app *Api) Start() {
 	}
 }
 
-func (app *Api) Wait() {
-	DefaultWait()
-}
-
 func (app *Api) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
