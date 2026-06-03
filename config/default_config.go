@@ -4,6 +4,8 @@ var DefaultConfigYaml = `
 info:
   version: v0.6.1
   edition: global.edition.community
+log:
+  path: ./logs
 mongo:
   host: localhost
   port: 27017
@@ -28,8 +30,9 @@ grpc:
   authKey: Crawlab2021!
 fs:
   filer:
-    proxy: http://localhost:8888
-    url: http://localhost:8000/filer
+    // proxy: http://localhost:8888
+    // url: http://localhost:8888/filer
+    url: http://localhost:8888
     authKey: Crawlab2021!
 node:
   master: Y

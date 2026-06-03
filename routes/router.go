@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"path"
@@ -83,6 +84,7 @@ func (svc *RouterService) RegisterHandlerToGroup(group *gin.RouterGroup, path st
 }
 
 func InitRoutes(app *gin.Engine) (err error) {
+	basePath := ""
 	// routes groups
 	groups := NewRouterGroups(app)
 
@@ -93,8 +95,58 @@ func InitRoutes(app *gin.Engine) (err error) {
 	registerRoutesAnonymousGroup(svc, groups)
 	registerRoutesAuthGroup(svc, groups)
 	registerRoutesFilterGroup(svc, groups)
-	registerStaticRoutes(svc, groups)
 
+	if distFS, err := web.DistFS(); err == nil {
+		if indexFile, err := distFS.Open("index.html"); err == nil {
+			_ = indexFile.Close()
+			httpFS := http.FS(distFS)
+			serveIndex := func(ctx *gin.Context) {
+				indexHTML, err := renderIndexHTML(distFS, basePath)
+				if err != nil {
+					ctx.Status(http.StatusNotFound)
+					return
+				}
+				setHTMLCacheHeaders(ctx)
+				ctx.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+			}
+			serveAsset := func(ctx *gin.Context) {
+				assetPath := "assets/" + strings.TrimPrefix(ctx.Param("filepath"), "/")
+				if assetFile, err := distFS.Open(assetPath); err == nil {
+					_ = assetFile.Close()
+					setStaticAssetCacheHeaders(ctx)
+					ctx.FileFromFS(assetPath, httpFS)
+					return
+				}
+				ctx.Status(http.StatusNotFound)
+			}
+
+			app.GET("/", serveIndex)
+			app.GET("/assets/*filepath", serveAsset)
+			app.HEAD("/assets/*filepath", serveAsset)
+			app.NoRoute(func(ctx *gin.Context) {
+				requestPath, ok := stripBasePath(basePath, ctx.Request.URL.Path)
+				if !ok {
+					ctx.Status(http.StatusNotFound)
+					return
+				}
+
+				if strings.HasPrefix(requestPath, "/api") {
+					ctx.Status(http.StatusNotFound)
+					return
+				}
+
+				if assetPath, ok := staticAssetPath(requestPath); ok {
+					if assetFile, err := distFS.Open(assetPath); err == nil {
+						_ = assetFile.Close()
+						setStaticAssetCacheHeaders(ctx)
+						ctx.FileFromFS(assetPath, httpFS)
+						return
+					}
+				}
+				serveIndex(ctx)
+			})
+		}
+	}
 	return nil
 }
 
@@ -115,71 +167,64 @@ func registerRoutesAnonymousGroup(svc *RouterService, groups *RouterGroups) {
 	svc.RegisterActionControllerToGroup(groups.AnonymousGroup, "/demo", controllers.DemoController)
 }
 
-func registerStaticRoutes(svc *RouterService, groups *RouterGroups) error {
-	distFS, err := web.DistFS()
-	if err != nil {
-		return err
-	}
-
-	svc.app.NoRoute(readHandler(distFS))
-	return nil
+func setHTMLCacheHeaders(ctx *gin.Context) {
+	ctx.Header("Cache-Control", "no-store")
+	ctx.Header("Expires", "0")
+	ctx.Header("Pragma", "no-cache")
 }
 
-func readHandler(distFS fs.FS) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		p := strings.TrimPrefix(ctx.Request.URL.Path, "/")
-		p = path.Clean(p)
-
-		if p != "." {
-			if data, ok := readFile(distFS, p); ok {
-				ctx.Data(http.StatusOK, contentType(p), data)
-				return
-			}
-		}
-
-		index, err := fs.ReadFile(distFS, "index.html")
-		if err != nil {
-			ctx.Status(http.StatusNotFound)
-			return
-		}
-		ctx.Data(http.StatusOK, "text/html; charset=utf-8", index)
-	}
+func setStaticAssetCacheHeaders(c *gin.Context) {
+	c.Header("Cache-Control", "public, max-age=31536000, immutable")
 }
 
-func readFile(distFS fs.FS, name string) ([]byte, bool) {
-	_, err := fs.Stat(distFS, name)
+func renderIndexHTML(staticFS fs.FS, basePath string) ([]byte, error) {
+	indexFile, err := staticFS.Open("index.html")
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
-
-	data, err := fs.ReadFile(distFS, name)
-	if err != nil {
-		return nil, false
-	}
-	return data, true
+	defer indexFile.Close()
+	return io.ReadAll(indexFile)
 }
 
-func contentType(name string) string {
-	switch path.Ext(name) {
-	case ".html":
-		return "text/html; charset=utf-8"
-	case ".js":
-		return "text/javascript; charset=utf-8"
-	case ".css":
-		return "text/css; charset=utf-8"
-	case ".svg":
-		return "image/svg+xml"
-	case ".json":
-		return "application/json"
-	case ".png":
-		return "image/png"
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".ico":
-		return "image/x-icon"
-	default:
-		return "application/octet-stream"
+func cleanURLPath(requestPath string) string {
+	cleaned := path.Clean(requestPath)
+	if cleaned == "." {
+		return "/"
 	}
+	if !strings.HasPrefix(cleaned, "/") {
+		return "/" + cleaned
+	}
+	return cleaned
+}
+
+func staticAssetPath(requestPath string) (string, bool) {
+	cleaned := cleanURLPath(requestPath)
+	if strings.Contains(cleaned, "\\") {
+		return "", false
+	}
+	relPath := strings.TrimPrefix(cleaned, "/")
+	if relPath == "" {
+		return "", false
+	}
+	return relPath, true
+}
+
+func stripBasePath(basePath, requestPath string) (string, bool) {
+	cleaned := cleanURLPath(requestPath)
+	if basePath == "" {
+		return cleaned, true
+	}
+	if cleaned == basePath {
+		return "/", true
+	}
+	if !strings.HasPrefix(cleaned, basePath+"/") {
+		return "", false
+	}
+	trimmed := strings.TrimPrefix(cleaned, basePath)
+	if trimmed == "" {
+		return "/", true
+	}
+	return trimmed, true
 }
 
 func registerRoutesAuthGroup(svc *RouterService, groups *RouterGroups) {
