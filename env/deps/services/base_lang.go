@@ -293,7 +293,7 @@ func (svc *BaseLangService) GetInstalledList(searchQuery string, pagination *ent
 				"latest_version": "$latest_version",
 			},
 		}},
-		{{"$sort", bson.D{{"name", 1}}}},
+		{{Key: "$sort", Value: bson.D{{Key: "name", Value: 1}}}},
 	}
 
 	// dependency results
