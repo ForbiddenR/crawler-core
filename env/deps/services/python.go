@@ -1,11 +1,17 @@
 package services
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
+	"net/url"
+	"os/exec"
+	"path"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
 	entity2 "github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/env/deps/constants"
 	"github.com/crawlab-team/crawlab-core/env/deps/entity"
@@ -14,12 +20,6 @@ import (
 	"github.com/imroc/req"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"net/url"
-	"os/exec"
-	"path"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type PythonService struct {
@@ -30,20 +30,49 @@ func (svc *PythonService) Init() {
 }
 
 func (svc *PythonService) GetRepoList(query string, pagination *entity2.Pagination) (deps []models.Dependency, total int, err error) {
-	// request session
-	reqSession := req.New()
+	if strings.TrimSpace(query) == "" {
+		return nil, 0, nil
+	}
 
-	// set timeout
+	depNames, total, err := svc.searchPackageNames(query, pagination)
+	if err != nil {
+		return nil, 0, trace.TraceError(err)
+	}
+	if total == 0 {
+		return nil, 0, nil
+	}
+
+	deps = make([]models.Dependency, len(depNames))
+	for i, depName := range depNames {
+		deps[i] = models.Dependency{Name: depName}
+	}
+	svc.populateLatestVersions(deps)
+
+	depsResults, err := svc.getDependencyResults(depNames)
+	if err != nil {
+		return nil, 0, trace.TraceError(err)
+	}
+
+	depsResultsMap := map[string]entity.DependencyResult{}
+	for _, dr := range depsResults {
+		depsResultsMap[dr.Name] = dr
+	}
+
+	for i, d := range deps {
+		dr, ok := depsResultsMap[d.Name]
+		if ok {
+			deps[i].Result = dr
+		}
+	}
+
+	return deps, total, nil
+}
+
+func (svc *PythonService) searchPackageNames(query string, pagination *entity2.Pagination) (depNames []string, total int, err error) {
+	reqSession := req.New()
 	reqSession.SetTimeout(15 * time.Second)
 
-	// user agent
-	ua := req.Header{"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
-
-	// request url
-	requestUrl := fmt.Sprintf("https://pypi.org/search?page=%d&q=%s", pagination.Page, url.QueryEscape(query))
-
-	// perform request
-	res, err := reqSession.Get(requestUrl, ua)
+	res, err := reqSession.Get("https://pypi.org/simple/", req.Header{"Accept": "application/vnd.pypi.simple.v1+json"})
 	if err != nil {
 		if res != nil {
 			err = errors.New(res.String())
@@ -52,45 +81,56 @@ func (svc *PythonService) GetRepoList(query string, pagination *entity2.Paginati
 		return nil, 0, trace.TraceError(err)
 	}
 
-	// response bytes
-	data, err := res.ToBytes()
-	if err != nil {
-		return nil, 0, trace.TraceError(err)
+	var simpleRes struct {
+		Projects []struct {
+			Name string `json:"name"`
+		} `json:"projects"`
 	}
-	buf := bytes.NewBuffer(data)
-
-	// parse html
-	doc, err := goquery.NewDocumentFromReader(buf)
-	if err != nil {
+	if err := res.ToJSON(&simpleRes); err != nil {
 		return nil, 0, trace.TraceError(err)
 	}
 
-	// dependencies
-	var depNames []string
-	doc.Find(".left-layout__main > form ul > li").Each(func(i int, s *goquery.Selection) {
-		d := models.Dependency{
-			Name:          s.Find(".package-snippet__name").Text(),
-			LatestVersion: s.Find(".package-snippet__version").Text(),
+	normalizedQuery := normalizePythonPackageName(query)
+	for _, p := range simpleRes.Projects {
+		if strings.Contains(normalizePythonPackageName(p.Name), normalizedQuery) {
+			depNames = append(depNames, p.Name)
 		}
-		deps = append(deps, d)
-		depNames = append(depNames, d.Name)
-	})
-
-	// total
-	totalStr := doc.Find(".left-layout__main .split-layout p > strong").Text()
-	escapeStr := ",+"
-	for _, c := range strings.Split(escapeStr, "") {
-		totalStr = strings.ReplaceAll(totalStr, c, "")
 	}
-	total, _ = strconv.Atoi(totalStr)
+	sort.Strings(depNames)
 
-	// empty results
-	if total == 0 {
-		return nil, 0, nil
+	total = len(depNames)
+	page := pagination.Page
+	if page <= 0 {
+		page = 1
 	}
+	size := pagination.Size
+	if size <= 0 {
+		size = 10
+	}
+	start := (page - 1) * size
+	if start >= total {
+		return nil, total, nil
+	}
+	end := min(start+size, total)
+	return depNames[start:end], total, nil
+}
 
-	// dependencies in db
-	var depsResults []entity.DependencyResult
+func (svc *PythonService) populateLatestVersions(deps []models.Dependency) {
+	wg := sync.WaitGroup{}
+	wg.Add(len(deps))
+	for i := range deps {
+		go func(i int) {
+			defer wg.Done()
+			v, err := svc.GetLatestVersion(deps[i])
+			if err == nil {
+				deps[i].LatestVersion = v
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+func (svc *PythonService) getDependencyResults(depNames []string) (depsResults []entity.DependencyResult, err error) {
 	pipelines := mongo2.Pipeline{
 		{{
 			"$match",
@@ -123,24 +163,13 @@ func (svc *PythonService) GetRepoList(query string, pagination *entity2.Paginati
 		}},
 	}
 	if err := svc.parent.colD.Aggregate(pipelines, nil).All(&depsResults); err != nil {
-		return nil, 0, trace.TraceError(err)
+		return nil, trace.TraceError(err)
 	}
+	return depsResults, nil
+}
 
-	// dependencies map
-	depsResultsMap := map[string]entity.DependencyResult{}
-	for _, dr := range depsResults {
-		depsResultsMap[dr.Name] = dr
-	}
-
-	// iterate dependencies
-	for i, d := range deps {
-		dr, ok := depsResultsMap[d.Name]
-		if ok {
-			deps[i].Result = dr
-		}
-	}
-
-	return deps, total, nil
+func normalizePythonPackageName(name string) string {
+	return strings.NewReplacer("_", "-", ".", "-").Replace(strings.ToLower(name))
 }
 
 func (svc *PythonService) GetDependencies(params entity.UpdateParams) (deps []models.Dependency, err error) {
@@ -253,42 +282,25 @@ func (svc *PythonService) UninstallDependencies(params entity.UninstallParams) (
 }
 
 func (svc *PythonService) GetLatestVersion(dep models.Dependency) (v string, err error) {
-	// not exists in cache, request from pypi
 	reqSession := req.New()
-
-	// set timeout
 	reqSession.SetTimeout(60 * time.Second)
 
-	// user agent
-	ua := req.Header{"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"}
-
-	// request url
-	requestUrl := fmt.Sprintf("https://pypi.org/project/%s/", dep.Name)
-
-	// perform request
-	res, err := reqSession.Get(requestUrl, ua)
+	requestUrl := fmt.Sprintf("https://pypi.org/pypi/%s/json", url.PathEscape(dep.Name))
+	res, err := reqSession.Get(requestUrl)
 	if err != nil {
 		return "", trace.TraceError(err)
 	}
 
-	// response bytes
-	data, err := res.ToBytes()
-	if err != nil {
-		return "", trace.TraceError(err)
+	var pypiRes struct {
+		Info struct {
+			Version string `json:"version"`
+		} `json:"info"`
 	}
-	buf := bytes.NewBuffer(data)
-
-	// parse html
-	doc, err := goquery.NewDocumentFromReader(buf)
-	if err != nil {
+	if err := res.ToJSON(&pypiRes); err != nil {
 		return "", trace.TraceError(err)
 	}
 
-	// latest version
-	v = doc.Find(".release-timeline .release--current .release__version").Text()
-	v = strings.TrimSpace(v)
-
-	return v, nil
+	return strings.TrimSpace(pypiRes.Info.Version), nil
 }
 
 func NewPythonService(parent *Service) (svc *PythonService) {
