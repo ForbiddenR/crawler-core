@@ -52,12 +52,17 @@ func (app *ServerV2) Start() {
 }
 
 func (app *ServerV2) Wait() {
-	<-app.quit
+	DefaultWait()
 }
 
 func (app *ServerV2) Stop() {
-	app.api.Stop()
-	app.quit <- 1
+	if utils.IsMaster() {
+		if utils.IsDocker() {
+			app.dck.Stop()
+		}
+		app.api.Stop()
+	}
+	app.nodeSvc.Stop()
 }
 
 func (app *ServerV2) GetApi() ApiApp {
