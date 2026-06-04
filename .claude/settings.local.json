@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version *)",
+      "Bash(curl -fsSL \"https://go.dev/dl/go1.26.3.linux-amd64.tar.gz\" -o \"/tmp/go1.26.3.linux-amd64.tar.gz\")",
+      "Bash(tar -C \"/usr/local\" -xzf \"/tmp/go1.26.3.linux-amd64.tar.gz\")",
+      "Bash(ln -sf \"/usr/local/go/bin/go\" \"/usr/local/bin/go\")",
+      "Bash(ln -sf \"/usr/local/go/bin/gofmt\" \"/usr/local/bin/gofmt\")",
+      "Bash(go env *)",
+      "Bash(go list *)",
+      "Bash(gofmt -w /tmp/nonexistent)",
+      "Bash(curl -fsSL \"https://pypi.org/search?page=1&q=requests\")",
+      "Bash(curl -fsSL -D - \"https://pypi.org/search?page=1&q=requests\" -o /tmp/pypi-search.html)",
+      "Bash(curl -fsSL \"https://pypi.org/pypi/requests/json\")",
+      "Bash(python3 -)",
+      "Bash(curl -fsSL \"https://pypi.org/simple/requests/\")",
+      "Bash(gofmt *)",
+      "Bash(go test *)",
+      "Bash(python3 -m pip index versions crawlab)",
+      "Bash(python3 -m pip index versions crawlab-sdk)",
+      "Bash(go mod *)",
+      "Bash(go get *)",
+      "Bash(git ls-remote *)",
+      "Bash(gh api *)",
+      "Bash(git fetch *)",
+      "Bash(cp *)"
+    ]
+  }
+}
