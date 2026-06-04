@@ -73,7 +73,7 @@ func GetResultList(c *gin.Context) {
 
 	// get results
 	data, err := svc.List(query, &generic.ListOptions{
-		Sort:  []generic.ListSort{{"_id", generic.SortDirectionDesc}},
+		Sort:  []generic.ListSort{{Key: "_id", Direction: generic.SortDirectionDesc}},
 		Skip:  pagination.Size * (pagination.Page - 1),
 		Limit: pagination.Size,
 	})

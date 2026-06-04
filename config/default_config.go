@@ -28,8 +28,8 @@ grpc:
   authKey: Crawlab2021!
 fs:
   filer:
-    proxy: http://localhost:8888
-    url: http://localhost:8000/filer
+    // proxy: http://localhost:8888
+    url: http://localhost:8888
     authKey: Crawlab2021!
 node:
   master: Y
