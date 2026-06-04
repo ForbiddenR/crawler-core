@@ -102,8 +102,6 @@ github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+Ce
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJmJgSg28kpZDP6UIiPt0e0Oz0kqKNGyRaWEPv84=
-github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
-github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bwesterb/go-ristretto v1.2.3/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.9.1 h1:6iJ6NqdoxCDr6mbY8h18oSO+cShGSMRGCEo7F2h0x8s=
@@ -149,8 +147,6 @@ github.com/cpuguy83/go-md2man/v2 v2.0.1/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46t
 github.com/crawlab-team/crawlab-db v0.6.0-1/go.mod h1:gfeF0nAnFuup6iYvgHkY0in/HpO/+JktXqVNMdhoxhU=
 github.com/crawlab-team/crawlab-db v0.6.0-beta.20220417.1300.0.20221226064900-5a357ee73484 h1:1CXWC3lYcVWcgPRc3PNKzZ3fcfX5WZ/V8xwzHEMUFHQ=
 github.com/crawlab-team/crawlab-db v0.6.0-beta.20220417.1300.0.20221226064900-5a357ee73484/go.mod h1:gfeF0nAnFuup6iYvgHkY0in/HpO/+JktXqVNMdhoxhU=
-github.com/crawlab-team/crawlab-fs v0.6.0-beta.20211101.1940.0.20221218100256-a28d12756f73 h1:xIgfVPa3ZJWC72Y57oHS41n4jRtGZPn1YDEYBgMj2EU=
-github.com/crawlab-team/crawlab-fs v0.6.0-beta.20211101.1940.0.20221218100256-a28d12756f73/go.mod h1:y9YhLLR3GuPrDuPKe7ZuiHCITK9K2IcI8nlznF8YIEc=
 github.com/crawlab-team/crawlab-fs v0.6.3 h1:mS91sYu+tOPavjYvt4CZ8YwY5okEiwCAuyx/5RIbXJY=
 github.com/crawlab-team/crawlab-fs v0.6.3/go.mod h1:y9YhLLR3GuPrDuPKe7ZuiHCITK9K2IcI8nlznF8YIEc=
 github.com/crawlab-team/crawlab-grpc v0.6.0-beta.20211219.1930.0.20221020032435-afa1c691f73c h1:jX0iax3WHwomWGQVWrCTy8a4zYDsKKyuspP3+04XCcU=
