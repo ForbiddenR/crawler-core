@@ -45,10 +45,10 @@ type ElasticsearchResponseData struct {
 		} `json:"total"`
 		MaxScore float64 `json:"max_score"`
 		Hits     []struct {
-			Index  string  `json:"_index"`
-			Id     string  `json:"_id"`
-			Score  float64 `json:"_score"`
-			Source any     `json:"_source"`
+			Index  string      `json:"_index"`
+			Id     string      `json:"_id"`
+			Score  float64     `json:"_score"`
+			Source interface{} `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
 }

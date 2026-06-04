@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeDataCollection(d any, err error) (res *models2.DataCollection, err2 error) {
+func convertTypeDataCollection(d interface{}, err error) (res *models2.DataCollection, err2 error) {
 	if err != nil {
 		return nil, err
 	}

@@ -35,7 +35,7 @@ func GetFilter(c *gin.Context) (f *entity.Filter, err error) {
 				conditions[i].Value = item
 			}
 		case reflect.Slice, reflect.Array:
-			var items []any
+			var items []interface{}
 			for i := 0; i < v.Len(); i++ {
 				vItem := v.Index(i)
 				item := vItem.Interface()

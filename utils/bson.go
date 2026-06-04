@@ -1,11 +1,10 @@
 package utils
 
 import (
-	"reflect"
-
 	"github.com/emirpasic/gods/sets/hashset"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"reflect"
 )
 
 func BsonMEqual(v1, v2 bson.M) (ok bool) {
@@ -39,28 +38,28 @@ func bsonMEqual(v1, v2 bson.M) (ok bool) {
 
 		var v1ValueBsonM bson.M
 		var v1ValueBsonA bson.A
-		switch v1t := v1Value.(type) {
+		switch v1Value.(type) {
 		case bson.M:
 			mode = 1
-			v1ValueBsonM = v1t
+			v1ValueBsonM = v1Value.(bson.M)
 		case bson.A:
 			mode = 2
-			v1ValueBsonA = v1t
+			v1ValueBsonA = v1Value.(bson.A)
 		}
 
 		var v2ValueBsonM bson.M
 		var v2ValueBsonA bson.A
-		switch v2t := v2Value.(type) {
+		switch v2Value.(type) {
 		case bson.M:
 			if mode != 1 {
 				return false
 			}
-			v2ValueBsonM = v2t
+			v2ValueBsonM = v2Value.(bson.M)
 		case bson.A:
 			if mode != 2 {
 				return false
 			}
-			v2ValueBsonA = v2t
+			v2ValueBsonA = v2Value.(bson.A)
 		}
 
 		switch mode {
@@ -87,9 +86,9 @@ func bsonMEqual(v1, v2 bson.M) (ok bool) {
 
 func NormalizeBsonMObjectId(m bson.M) (res bson.M) {
 	for k, v := range m {
-		switch t := v.(type) {
+		switch v.(type) {
 		case string:
-			oid, err := primitive.ObjectIDFromHex(t)
+			oid, err := primitive.ObjectIDFromHex(v.(string))
 			if err == nil {
 				m[k] = oid
 			}
@@ -102,20 +101,20 @@ func NormalizeBsonMObjectId(m bson.M) (res bson.M) {
 
 func DenormalizeBsonMObjectId(m bson.M) (res bson.M) {
 	for k, v := range m {
-		switch t := v.(type) {
+		switch v.(type) {
 		case primitive.ObjectID:
 			m[k] = v.(primitive.ObjectID).Hex()
 		case bson.M:
-			m[k] = NormalizeBsonMObjectId(t)
+			m[k] = NormalizeBsonMObjectId(v.(bson.M))
 		}
 	}
 	return m
 }
 
-func NormalizeObjectId(v any) (res any) {
-	switch t := v.(type) {
+func NormalizeObjectId(v interface{}) (res interface{}) {
+	switch v.(type) {
 	case string:
-		oid, err := primitive.ObjectIDFromHex(t)
+		oid, err := primitive.ObjectIDFromHex(v.(string))
 		if err != nil {
 			return v
 		}

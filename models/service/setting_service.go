@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeSetting(d any, err error) (res *models2.Setting, err2 error) {
+func convertTypeSetting(d interface{}, err error) (res *models2.Setting, err2 error) {
 	if err != nil {
 		return nil, err
 	}

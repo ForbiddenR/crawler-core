@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypePermission(d any, err error) (res *models2.Permission, err2 error) {
+func convertTypePermission(d interface{}, err error) (res *models2.Permission, err2 error) {
 	if err != nil {
 		return nil, err
 	}

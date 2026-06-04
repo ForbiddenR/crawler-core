@@ -28,7 +28,7 @@ type ServiceMongo struct {
 	t     time.Time
 }
 
-func (svc *ServiceMongo) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
+func (svc *ServiceMongo) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
 	_query := svc.getQuery(query)
 	_opts := svc.getOpts(opts)
 	return svc.getList(_query, _opts)
@@ -39,8 +39,8 @@ func (svc *ServiceMongo) Count(query generic.ListQuery) (n int, err error) {
 	return svc.modelColSvc.Count(_query)
 }
 
-func (svc *ServiceMongo) Insert(docs ...any) (err error) {
-	if svc.dc.Dedup.Enabled {
+func (svc *ServiceMongo) Insert(docs ...interface{}) (err error) {
+	if svc.dc.Dedup.Enabled && len(svc.dc.Dedup.Keys) > 0 {
 		for _, doc := range docs {
 			hash, err := utils.GetResultHash(doc, svc.dc.Dedup.Keys)
 			if err != nil {
@@ -95,7 +95,7 @@ func (svc *ServiceMongo) GetTime() (t time.Time) {
 	return svc.t
 }
 
-func (svc *ServiceMongo) getList(query bson.M, opts *mongo.FindOptions) (results []any, err error) {
+func (svc *ServiceMongo) getList(query bson.M, opts *mongo.FindOptions) (results []interface{}, err error) {
 	list, err := svc.modelColSvc.GetList(query, opts)
 	if err != nil {
 		return nil, err

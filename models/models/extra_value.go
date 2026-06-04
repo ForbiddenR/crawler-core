@@ -10,7 +10,7 @@ type ExtraValue struct {
 	ObjectId primitive.ObjectID `json:"oid" bson:"oid"`
 	Model    string             `json:"model" bson:"m"`
 	Type     string             `json:"type" bson:"t"`
-	Value    any                `json:"value" bson:"v"`
+	Value    interface{}        `json:"value" bson:"v"`
 }
 
 func (ev *ExtraValue) GetId() (id primitive.ObjectID) {
@@ -21,11 +21,11 @@ func (ev *ExtraValue) SetId(id primitive.ObjectID) {
 	ev.Id = id
 }
 
-func (ev *ExtraValue) GetValue() (v any) {
+func (ev *ExtraValue) GetValue() (v interface{}) {
 	return ev.Value
 }
 
-func (ev *ExtraValue) SetValue(v any) {
+func (ev *ExtraValue) SetValue(v interface{}) {
 	ev.Value = v
 }
 

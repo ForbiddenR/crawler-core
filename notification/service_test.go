@@ -11,7 +11,7 @@ func TestService_sendMobile(t *testing.T) {
 	e := T.NewExpect(t)
 	time.Sleep(1 * time.Second)
 
-	data := map[string]any{
+	data := map[string]interface{}{
 		"task_id": T.TestTask.GetId().Hex(),
 	}
 	e.POST("/send/mobile").WithJSON(data).

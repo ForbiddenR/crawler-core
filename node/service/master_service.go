@@ -4,7 +4,7 @@ import (
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
-	envDepsServices "github.com/crawlab-team/crawlab-core/env/deps/services"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/grpc/server"
 	"github.com/crawlab-team/crawlab-core/interfaces"
@@ -14,11 +14,7 @@ import (
 	"github.com/crawlab-team/crawlab-core/models/service"
 	"github.com/crawlab-team/crawlab-core/node/config"
 	"github.com/crawlab-team/crawlab-core/notification"
-	"github.com/crawlab-team/crawlab-core/plugin"
-	"github.com/crawlab-team/crawlab-core/schedule"
-	"github.com/crawlab-team/crawlab-core/spider/admin"
-	"github.com/crawlab-team/crawlab-core/task/handler"
-	"github.com/crawlab-team/crawlab-core/task/scheduler"
+	"github.com/crawlab-team/crawlab-core/system"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/mongo"
 	grpc "github.com/crawlab-team/crawlab-grpc"
@@ -26,7 +22,6 @@ import (
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/dig"
 	"time"
 )
 
@@ -38,10 +33,9 @@ type MasterService struct {
 	schedulerSvc    interfaces.TaskSchedulerService
 	handlerSvc      interfaces.TaskHandlerService
 	scheduleSvc     interfaces.ScheduleService
-	pluginSvc       interfaces.PluginService
-	envDepsSvc      *envDepsServices.Service
 	notificationSvc *notification.Service
 	spiderAdminSvc  interfaces.SpiderAdminService
+	systemSvc       *system.Service
 
 	// settings
 	cfgPath         string
@@ -80,12 +74,6 @@ func (svc *MasterService) Start() {
 
 	// start schedule service
 	go svc.scheduleSvc.Start()
-
-	// start plugin service
-	go svc.pluginSvc.Start()
-
-	// start env deps service
-	go svc.envDepsSvc.Start()
 
 	// start notification service
 	go svc.notificationSvc.Start()
@@ -312,7 +300,7 @@ func (svc *MasterService) updateNodeAvailableRunners(n interfaces.Node) (err err
 func NewMasterService(opts ...Option) (res interfaces.NodeMasterService, err error) {
 	// master service
 	svc := &MasterService{
-		cfgPath:         config2.DefaultConfigPath,
+		cfgPath:         config2.GetConfigPath(),
 		monitorInterval: 15 * time.Second,
 		stopOnError:     false,
 	}
@@ -329,39 +317,13 @@ func NewMasterService(opts ...Option) (res interfaces.NodeMasterService, err err
 	}
 
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(service.NewService); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(config.ProvideConfigService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(server.ProvideGetServer(svc.cfgPath, serverOpts...)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(scheduler.ProvideGetTaskSchedulerService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(handler.ProvideGetTaskHandlerService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(schedule.ProvideGetScheduleService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(plugin.ProvideGetPluginService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(admin.ProvideGetSpiderAdminService(svc.cfgPath)); err != nil {
-		return nil, err
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		cfgSvc interfaces.NodeConfigService,
 		modelSvc service.ModelService,
 		server interfaces.GrpcServer,
 		schedulerSvc interfaces.TaskSchedulerService,
 		handlerSvc interfaces.TaskHandlerService,
 		scheduleSvc interfaces.ScheduleService,
-		pluginSvc interfaces.PluginService,
 		spiderAdminSvc interfaces.SpiderAdminService,
 	) {
 		svc.cfgSvc = cfgSvc
@@ -370,17 +332,16 @@ func NewMasterService(opts ...Option) (res interfaces.NodeMasterService, err err
 		svc.schedulerSvc = schedulerSvc
 		svc.handlerSvc = handlerSvc
 		svc.scheduleSvc = scheduleSvc
-		svc.pluginSvc = pluginSvc
 		svc.spiderAdminSvc = spiderAdminSvc
 	}); err != nil {
 		return nil, err
 	}
 
-	// env deps service
-	svc.envDepsSvc = envDepsServices.GetService()
-
 	// notification service
 	svc.notificationSvc = notification.GetService()
+
+	// system service
+	svc.systemSvc = system.GetService()
 
 	// init
 	if err := svc.Init(); err != nil {
@@ -392,11 +353,11 @@ func NewMasterService(opts ...Option) (res interfaces.NodeMasterService, err err
 
 func ProvideMasterService(path string, opts ...Option) func() (interfaces.NodeMasterService, error) {
 	// path
-	if path == "" || path == config2.DefaultConfigPath {
+	if path == "" || path == config2.GetConfigPath() {
 		if viper.GetString("config.path") != "" {
 			path = viper.GetString("config.path")
 		} else {
-			path = config2.DefaultConfigPath
+			path = config2.GetConfigPath()
 		}
 	}
 	opts = append(opts, WithConfigPath(path))

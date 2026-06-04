@@ -3,19 +3,16 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"strings"
-
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/crawlab-team/crawlab-core/models/service"
-	"github.com/crawlab-team/crawlab-core/node/config"
-	"github.com/crawlab-team/crawlab-core/task/stats"
+	"github.com/crawlab-team/crawlab-core/notification"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/mongo"
 	grpc "github.com/crawlab-team/crawlab-grpc"
@@ -23,7 +20,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/dig"
+	"io"
+	"strings"
 )
 
 type TaskServer struct {
@@ -112,12 +110,62 @@ func (svr TaskServer) Fetch(ctx context.Context, request *grpc.Request) (respons
 	return HandleSuccessWithData(tid)
 }
 
+func (svr TaskServer) SendNotification(ctx context.Context, request *grpc.Request) (response *grpc.Response, err error) {
+	svc := notification.GetService()
+	var t = new(models.Task)
+	if err := json.Unmarshal(request.Data, t); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	t, err = svr.modelSvc.GetTaskById(t.Id)
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	td, err := json.Marshal(t)
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	var e bson.M
+	if err := json.Unmarshal(td, &e); err != nil {
+		return nil, trace.TraceError(err)
+	}
+	ts, err := svr.modelSvc.GetTaskStatById(t.Id)
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	settings, _, err := svc.GetSettingList(bson.M{
+		"enabled": true,
+	}, nil, nil)
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	for _, s := range settings {
+		switch s.TaskTrigger {
+		case constants.NotificationTriggerTaskFinish:
+			if t.Status != constants.TaskStatusPending && t.Status != constants.TaskStatusRunning {
+				_ = svc.Send(s, e)
+			}
+		case constants.NotificationTriggerTaskError:
+			if t.Status == constants.TaskStatusError || t.Status == constants.TaskStatusAbnormal {
+				_ = svc.Send(s, e)
+			}
+		case constants.NotificationTriggerTaskEmptyResults:
+			if t.Status != constants.TaskStatusPending && t.Status != constants.TaskStatusRunning {
+				if ts.ResultCount == 0 {
+					_ = svc.Send(s, e)
+				}
+			}
+		case constants.NotificationTriggerTaskNever:
+		}
+	}
+	return nil, nil
+}
+
 func (svr TaskServer) handleInsertData(msg *grpc.StreamMessage) (err error) {
 	data, err := svr.deserialize(msg)
 	if err != nil {
 		return err
 	}
-	var records []any
+	var records []interface{}
 	for _, d := range data.Records {
 		res, ok := d[constants.TaskKey]
 		if ok {
@@ -169,27 +217,12 @@ func (svr TaskServer) deserialize(msg *grpc.StreamMessage) (data entity.StreamMe
 	return data, nil
 }
 
-func NewTaskServer(opts ...TaskServerOption) (res *TaskServer, err error) {
+func NewTaskServer() (res *TaskServer, err error) {
 	// task server
 	svr := &TaskServer{}
 
-	// apply options
-	for _, opt := range opts {
-		opt(svr)
-	}
-
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(service.NewService); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(stats.ProvideGetTaskStatsService(svr.server.GetConfigPath())); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(config.ProvideConfigService(svr.server.GetConfigPath())); err != nil {
-		return nil, err
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		modelSvc service.ModelService,
 		statsSvc interfaces.TaskStatsService,
 		cfgSvc interfaces.NodeConfigService,
@@ -202,11 +235,4 @@ func NewTaskServer(opts ...TaskServerOption) (res *TaskServer, err error) {
 	}
 
 	return svr, nil
-}
-
-func ProvideTaskServer(server interfaces.GrpcServer, opts ...TaskServerOption) func() (res *TaskServer, err error) {
-	return func() (*TaskServer, error) {
-		opts = append(opts, WithServerTaskServerService(server))
-		return NewTaskServer(opts...)
-	}
 }

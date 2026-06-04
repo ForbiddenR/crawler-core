@@ -2,14 +2,13 @@ package event
 
 import (
 	"fmt"
-	"regexp"
-
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/go-trace"
 	"github.com/thoas/go-funk"
+	"regexp"
 )
 
 var S interfaces.EventService
@@ -39,7 +38,7 @@ func (svc *Service) Unregister(key string) {
 	}
 }
 
-func (svc *Service) SendEvent(eventName string, data ...any) {
+func (svc *Service) SendEvent(eventName string, data ...interface{}) {
 	for i, key := range svc.keys {
 		// include
 		include := svc.includes[i]

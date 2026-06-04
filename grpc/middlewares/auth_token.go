@@ -2,11 +2,10 @@ package middlewares
 
 import (
 	"context"
-
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -44,7 +43,7 @@ func GetAuthTokenUnaryChainInterceptor(nodeCfgSvc interfaces.NodeConfigService) 
 	md := metadata.Pairs(constants.GrpcHeaderAuthorization, nodeCfgSvc.GetAuthKey())
 	//header := metadata.MD{}
 	//header[constants.GrpcHeaderAuthorization] = []string{nodeCfgSvc.GetAuthKey()}
-	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		ctx = metadata.NewOutgoingContext(context.Background(), md)
 		//opts = append(opts, grpc.Header(&header))
 		return invoker(ctx, method, req, reply, cc, opts...)

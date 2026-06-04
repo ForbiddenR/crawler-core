@@ -1,33 +1,21 @@
 package scheduler
 
 import (
-	"fmt"
-	"math/rand"
-	"sync"
-	"time"
-
-	"github.com/apex/log"
-	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/errors"
-	"github.com/crawlab-team/crawlab-core/grpc/server"
 	"github.com/crawlab-team/crawlab-core/interfaces"
-	"github.com/crawlab-team/crawlab-core/models/client"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/crawlab-team/crawlab-core/models/service"
-	"github.com/crawlab-team/crawlab-core/node/config"
 	"github.com/crawlab-team/crawlab-core/task"
-	"github.com/crawlab-team/crawlab-core/task/handler"
-	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/mongo"
 	grpc "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
-	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/dig"
+	"time"
 )
 
 type Service struct {
@@ -44,7 +32,7 @@ type Service struct {
 
 func (svc *Service) Start() {
 	go svc.initTaskStatus()
-	//go svc.DequeueAndSchedule()
+	go svc.cleanupTasks()
 	svc.Wait()
 	svc.Stop()
 }
@@ -93,25 +81,26 @@ func (svc *Service) Enqueue(t interfaces.Task) (t2 interfaces.Task, err error) {
 	return t, nil
 }
 
-func (svc *Service) Cancel(id primitive.ObjectID, args ...any) (err error) {
-	// user
-	u := utils.GetUserFromArgs(args...)
-
+func (svc *Service) Cancel(id primitive.ObjectID, args ...interface{}) (err error) {
 	// task
 	t, err := svc.modelSvc.GetTaskById(id)
 	if err != nil {
 		return trace.TraceError(err)
 	}
 
+	// initial status
+	initialStatus := t.Status
+
+	// set task status as "cancelled"
+	_ = svc.SaveTask(t, constants.TaskStatusCancelled)
+
 	// set status of pending tasks as "cancelled" and remove from task item queue
-	if t.Status == constants.TaskStatusPending {
+	if initialStatus == constants.TaskStatusPending {
 		// remove from task item queue
 		if err := mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).DeleteId(t.GetId()); err != nil {
-			trace.PrintError(err)
+			return trace.TraceError(err)
 		}
-
-		// set task status as "cancelled"
-		return svc.SaveTask(t, constants.TaskStatusCancelled)
+		return nil
 	}
 
 	// whether task is running on master node
@@ -124,31 +113,20 @@ func (svc *Service) Cancel(id primitive.ObjectID, args ...any) (err error) {
 	// node
 	n, err := svc.modelSvc.GetNodeById(t.GetNodeId())
 	if err != nil {
-		// when error, force status being set as "cancelled"
-		trace.PrintError(err)
-		return svc.SaveTask(t, constants.TaskStatusCancelled)
+		return trace.TraceError(err)
 	}
 
 	if isMasterTask {
 		// cancel task on master
 		if err := svc.handlerSvc.Cancel(id); err != nil {
-			// cancel failed, force status being set as "cancelled"
-			trace.PrintError(err)
-			t, err := svc.modelSvc.GetTaskById(id)
-			if err != nil {
-				return err
-			}
-			t.Status = constants.TaskStatusCancelled
-			return delegate.NewModelDelegate(t, u).Save()
+			return trace.TraceError(err)
 		}
 		// cancel success
 		return nil
 	} else {
 		// send to cancel task on worker nodes
 		if err := svc.svr.SendStreamMessageWithData("node:"+n.GetKey(), grpc.StreamMessageCode_CANCEL_TASK, t); err != nil {
-			// cancel failed, force status being set as "cancelled"
-			t.Status = constants.TaskStatusCancelled
-			return delegate.NewModelDelegate(t, u).Save()
+			return trace.TraceError(err)
 		}
 		// cancel success
 		return nil
@@ -159,162 +137,16 @@ func (svc *Service) SetInterval(interval time.Duration) {
 	svc.interval = interval
 }
 
-func (svc *Service) getTaskQueueItems() (tqList []models.TaskQueueItem, err error) {
-	opts := &mongo.FindOptions{
-		Sort: bson.D{
-			{"p", 1},
-			{"_id", 1},
-		},
-	}
-	if err := mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).Find(nil, opts).All(&tqList); err != nil {
-		if err == mongo2.ErrNoDocuments {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return tqList, nil
-}
-
-func (svc *Service) getResourcesAndNodesMap() (resources map[string]models.Node, nodesMap map[primitive.ObjectID]models.Node, err error) {
-	nodesMap = map[primitive.ObjectID]models.Node{}
-	resources = map[string]models.Node{}
-	query := bson.M{
-		// enabled: true
-		"enabled": true,
-		// active: true
-		"active": true,
-		// available_runners > 0
-		"available_runners": bson.M{
-			"$gt": 0,
-		},
-	}
-	nodes, err := svc.modelSvc.GetNodeList(query, nil)
-	if err != nil {
-		if err == mongo2.ErrNoDocuments {
-			return nil, nil, nil
-		}
-		return nil, nil, err
-	}
-	for _, n := range nodes {
-		nodesMap[n.Id] = n
-		for i := 0; i < n.AvailableRunners; i++ {
-			key := fmt.Sprintf("%s:%d", n.Id.Hex(), i)
-			resources[key] = n
-		}
-	}
-	return resources, nodesMap, nil
-}
-
-func (svc *Service) matchResources(tqList []models.TaskQueueItem) (tasks []interfaces.Task, nodesMap map[primitive.ObjectID]models.Node, err error) {
-	// get resources and nodes map
-	resources, nodesMap, err := svc.getResourcesAndNodesMap()
-	if err != nil {
-		return nil, nil, err
-	}
-	if resources == nil || len(resources) == 0 {
-		return nil, nil, nil
-	}
-
-	// resources list
-	var resourcesList []models.Node
-	for _, r := range resources {
-		resourcesList = append(resourcesList, r)
-	}
-
-	// shuffle resources list
-	rand.Seed(time.Now().Unix())
-	rand.Shuffle(len(resourcesList), func(i, j int) {
-		resourcesList[i], resourcesList[j] = resourcesList[j], resourcesList[i]
-	})
-
-	// iterate task queue items
-	for _, tq := range tqList {
-		// task
-		t, err := svc.modelSvc.GetTaskById(tq.GetId())
-		if err != nil {
-			// remove task queue item if it is not found in tasks
-			_ = mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).DeleteId(tq.GetId())
-
-			// set task status as abnormal
-			t.Status = constants.TaskStatusAbnormal
-			t.Error = err.Error()
-			_ = delegate.NewModelDelegate(t, nil).Save()
-			continue
-		}
-
-		// iterate shuffled resources to match a resource
-		for i, r := range resourcesList {
-			// If node id is unset or node id of task matches with resource id (node id),
-			// assign corresponding resource id to the task
-			if t.GetNodeId().IsZero() ||
-				t.GetNodeId() == r.GetId() {
-				// assign resource id
-				t.NodeId = r.GetId()
-
-				// append to tasks
-				tasks = append(tasks, t)
-
-				// delete from resources list
-				resourcesList = append(resourcesList[:i], resourcesList[(i+1):]...)
-
-				// decrement available runners
-				n := nodesMap[r.GetId()]
-				n.DecrementAvailableRunners()
-
-				// break loop
-				break
-			}
-		}
-	}
-
-	return tasks, nodesMap, nil
-}
-
-func (svc *Service) updateResources(nodesMap map[primitive.ObjectID]models.Node) (err error) {
-	for _, n := range nodesMap {
-		if err := delegate.NewModelNodeDelegate(&n).Save(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (svc *Service) updateTasks(tasks []interfaces.Task) (err error) {
-	for _, t := range tasks {
-		// save task with node id
-		if err := delegate.NewModelDelegate(t).Save(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (svc *Service) deleteTaskQueueItems(tasks []interfaces.Task) (err error) {
-	for _, t := range tasks {
-		if err := mongo.GetMongoCol(interfaces.ModelColNameTaskQueue).DeleteId(t.GetId()); err != nil {
-			log.Warnf("task[id: %s] missing task queue: %s", t.GetId(), err.Error())
-			continue
-		}
-	}
-	return nil
-}
-
-func (svc *Service) handleTaskError(n interfaces.Node, t interfaces.Task, err error) {
-	trace.PrintError(err)
-	t.SetStatus(constants.TaskStatusError)
-	t.SetError(err.Error())
-	if n.GetIsMaster() {
-		_ = delegate.NewModelDelegate(t).Save()
-	} else {
-		_ = client.NewModelDelegate(t).Save()
-	}
-}
-
 // initTaskStatus initialize task status of existing tasks
 func (svc *Service) initTaskStatus() {
 	// set status of running tasks as TaskStatusAbnormal
 	runningTasks, err := svc.modelSvc.GetTaskList(bson.M{
-		"status": constants.TaskStatusRunning,
+		"status": bson.M{
+			"$in": []string{
+				constants.TaskStatusPending,
+				constants.TaskStatusRunning,
+			},
+		},
 	}, nil)
 	if err != nil {
 		if err == mongo2.ErrNoDocuments {
@@ -328,6 +160,9 @@ func (svc *Service) initTaskStatus() {
 				trace.PrintError(err)
 			}
 		}(&t)
+	}
+	if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTaskQueue).DeleteList(nil); err != nil {
+		return
 	}
 }
 
@@ -345,7 +180,46 @@ func (svc *Service) isMasterNode(t *models.Task) (ok bool, err error) {
 	return n.IsMaster, nil
 }
 
-func NewTaskSchedulerService(opts ...Option) (svc2 interfaces.TaskSchedulerService, err error) {
+func (svc *Service) cleanupTasks() {
+	for {
+		// task stats over 30 days ago
+		taskStats, err := svc.modelSvc.GetTaskStatList(bson.M{
+			"create_ts": bson.M{
+				"$lt": time.Now().Add(-30 * 24 * time.Hour),
+			},
+		}, nil)
+		if err != nil {
+			time.Sleep(30 * time.Minute)
+			continue
+		}
+
+		// task ids
+		var ids []primitive.ObjectID
+		for _, ts := range taskStats {
+			ids = append(ids, ts.Id)
+		}
+
+		if len(ids) > 0 {
+			// remove tasks
+			if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTask).DeleteList(bson.M{
+				"_id": bson.M{"$in": ids},
+			}); err != nil {
+				trace.PrintError(err)
+			}
+
+			// remove task stats
+			if err := svc.modelSvc.GetBaseService(interfaces.ModelIdTaskStat).DeleteList(bson.M{
+				"_id": bson.M{"$in": ids},
+			}); err != nil {
+				trace.PrintError(err)
+			}
+		}
+
+		time.Sleep(30 * time.Minute)
+	}
+}
+
+func NewTaskSchedulerService() (svc2 interfaces.TaskSchedulerService, err error) {
 	// base service
 	baseSvc, err := task.NewBaseService()
 	if err != nil {
@@ -358,92 +232,33 @@ func NewTaskSchedulerService(opts ...Option) (svc2 interfaces.TaskSchedulerServi
 		interval:        5 * time.Second,
 	}
 
-	// apply options
-	for _, opt := range opts {
-		opt(svc)
-	}
-
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(config.ProvideConfigService(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Invoke(func(nodeCfgSvc interfaces.NodeConfigService) {
-		svc.nodeCfgSvc = nodeCfgSvc
-	}); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(service.NewService); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(server.ProvideGetServer(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(handler.ProvideGetTaskHandlerService(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
+		nodeCfgSvc interfaces.NodeConfigService,
 		modelSvc service.ModelService,
 		svr interfaces.GrpcServer,
 		handlerSvc interfaces.TaskHandlerService,
 	) {
+		svc.nodeCfgSvc = nodeCfgSvc
 		svc.modelSvc = modelSvc
 		svc.svr = svr
 		svc.handlerSvc = handlerSvc
 	}); err != nil {
-		return nil, trace.TraceError(err)
+		return nil, err
 	}
 
 	return svc, nil
 }
 
-func ProvideTaskSchedulerService(path string, opts ...Option) func() (svc interfaces.TaskSchedulerService, err error) {
-	opts = append(opts, WithConfigPath(path))
-	return func() (svc interfaces.TaskSchedulerService, err error) {
-		return NewTaskSchedulerService(opts...)
-	}
-}
+var svc interfaces.TaskSchedulerService
 
-var store = sync.Map{}
-
-func GetTaskSchedulerService(path string, opts ...Option) (svr interfaces.TaskSchedulerService, err error) {
-	if path == "" {
-		path = config2.DefaultConfigPath
+func GetTaskSchedulerService() (svr interfaces.TaskSchedulerService, err error) {
+	if svc != nil {
+		return svc, nil
 	}
-	opts = append(opts, WithConfigPath(path))
-	res, ok := store.Load(path)
-	if ok {
-		svr, ok = res.(interfaces.TaskSchedulerService)
-		if ok {
-			return svr, nil
-		}
-	}
-	svr, err = NewTaskSchedulerService(opts...)
+	svc, err = NewTaskSchedulerService()
 	if err != nil {
 		return nil, err
 	}
-	store.Store(path, svr)
-	return svr, nil
-}
-
-func ProvideGetTaskSchedulerService(path string, opts ...Option) func() (svr interfaces.TaskSchedulerService, err error) {
-	// path
-	if path != "" || path == config2.DefaultConfigPath {
-		if viper.GetString("config.path") != "" {
-			path = viper.GetString("config.path")
-		} else {
-			path = config2.DefaultConfigPath
-		}
-	}
-	opts = append(opts, WithConfigPath(path))
-
-	// interval
-	intervalSeconds := viper.GetInt("task.scheduler.interval")
-	if intervalSeconds > 0 {
-		opts = append(opts, WithInterval(time.Duration(intervalSeconds)*time.Second))
-	}
-
-	return func() (svr interfaces.TaskSchedulerService, err error) {
-		return GetTaskSchedulerService(path, opts...)
-	}
+	return svc, nil
 }

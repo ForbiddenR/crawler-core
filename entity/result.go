@@ -2,23 +2,22 @@ package entity
 
 import (
 	"encoding/json"
-
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type Result map[string]any
+type Result map[string]interface{}
 
-func (r Result) Value() map[string]any {
+func (r Result) Value() map[string]interface{} {
 	return r
 }
 
-func (r Result) SetValue(key string, value any) {
+func (r Result) SetValue(key string, value interface{}) {
 	r[key] = value
 }
 
-func (r Result) GetValue(key string) (value any) {
+func (r Result) GetValue(key string) (value interface{}) {
 	value, _ = r[key]
 	return value
 }

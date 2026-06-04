@@ -2,6 +2,7 @@ package apps
 
 import (
 	"context"
+	"errors"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/controllers"
 	"github.com/crawlab-team/crawlab-core/interfaces"
@@ -67,12 +68,16 @@ func (app *Api) Start() {
 
 	// serve
 	if err := http.Serve(app.ln, app.app); err != nil {
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			log.Error("run server error:" + err.Error())
 		} else {
 			log.Info("server graceful down")
 		}
 	}
+}
+
+func (app *Api) Wait() {
+	DefaultWait()
 }
 
 func (app *Api) Stop() {

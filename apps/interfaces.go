@@ -23,18 +23,17 @@ type ApiApp interface {
 type NodeApp interface {
 	App
 	interfaces.WithConfigPath
-	SetGrpcAddress(address interfaces.Address)
 }
 
 type ServerApp interface {
 	NodeApp
-	GetApi() (api *Api)
+	GetApi() (api ApiApp)
 	GetNodeService() (masterSvc interfaces.NodeService)
 }
 
 type DockerApp interface {
 	App
-	GetParent() (parent ServerApp)
-	SetParent(parent ServerApp)
+	GetParent() (parent NodeApp)
+	SetParent(parent NodeApp)
 	Ready() (ok bool)
 }

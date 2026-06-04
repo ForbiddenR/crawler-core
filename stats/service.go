@@ -12,7 +12,7 @@ import (
 type Service struct {
 }
 
-func (svc *Service) GetOverviewStats(query bson.M) (data any, err error) {
+func (svc *Service) GetOverviewStats(query bson.M) (data interface{}, err error) {
 	stats := bson.M{}
 
 	// nodes
@@ -90,7 +90,7 @@ func (svc *Service) GetOverviewStats(query bson.M) (data any, err error) {
 	return stats, nil
 }
 
-func (svc *Service) GetDailyStats(query bson.M) (data any, err error) {
+func (svc *Service) GetDailyStats(query bson.M) (data interface{}, err error) {
 	tasksStats, err := svc.getDailyTasksStats(query)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (svc *Service) GetDailyStats(query bson.M) (data any, err error) {
 	return tasksStats, nil
 }
 
-func (svc *Service) GetTaskStats(query bson.M) (data any, err error) {
+func (svc *Service) GetTaskStats(query bson.M) (data interface{}, err error) {
 	stats := bson.M{}
 
 	// by status
@@ -122,9 +122,11 @@ func (svc *Service) GetTaskStats(query bson.M) (data any, err error) {
 	return stats, nil
 }
 
-func (svc *Service) getDailyTasksStats(query bson.M) (data any, err error) {
+func (svc *Service) getDailyTasksStats(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
-		{{"$match", query}},
+		{{
+			"$match", query,
+		}},
 		{{
 			"$addFields",
 			bson.M{
@@ -138,21 +140,11 @@ func (svc *Service) getDailyTasksStats(query bson.M) (data any, err error) {
 			},
 		}},
 		{{
-			"$lookup",
-			bson.M{
-				"from":         interfaces.ModelColNameTaskStat,
-				"localField":   "_id",
-				"foreignField": "_id",
-				"as":           "_ts",
-			},
-		}},
-		{{"$addFields", bson.M{"ts": bson.M{"$arrayElemAt": bson.A{"$_ts", 0}}}}},
-		{{
 			"$group",
 			bson.M{
 				"_id":     "$date",
 				"tasks":   bson.M{"$sum": 1},
-				"results": bson.M{"$sum": "$ts.result_count"},
+				"results": bson.M{"$sum": "$result_count"},
 			},
 		}},
 		{{
@@ -161,13 +153,13 @@ func (svc *Service) getDailyTasksStats(query bson.M) (data any, err error) {
 		}},
 	}
 	var results []entity.StatsDailyItem
-	if err := mongo.GetMongoCol(interfaces.ModelColNameTask).Aggregate(pipeline, nil).All(&results); err != nil {
+	if err := mongo.GetMongoCol(interfaces.ModelColNameTaskStat).Aggregate(pipeline, nil).All(&results); err != nil {
 		return nil, err
 	}
 	return results, nil
 }
 
-func (svc *Service) getOverviewResults(query bson.M) (data any, err error) {
+func (svc *Service) getOverviewResults(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -185,7 +177,7 @@ func (svc *Service) getOverviewResults(query bson.M) (data any, err error) {
 	return res["results"], nil
 }
 
-func (svc *Service) getTaskStatsByStatus(query bson.M) (data any, err error) {
+func (svc *Service) getTaskStatsByStatus(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -210,7 +202,7 @@ func (svc *Service) getTaskStatsByStatus(query bson.M) (data any, err error) {
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsByNode(query bson.M) (data any, err error) {
+func (svc *Service) getTaskStatsByNode(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -246,7 +238,7 @@ func (svc *Service) getTaskStatsByNode(query bson.M) (data any, err error) {
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsBySpider(query bson.M) (data any, err error) {
+func (svc *Service) getTaskStatsBySpider(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -283,7 +275,7 @@ func (svc *Service) getTaskStatsBySpider(query bson.M) (data any, err error) {
 	return results, nil
 }
 
-func (svc *Service) getTaskStatsHistogram(query bson.M) (data any, err error) {
+func (svc *Service) getTaskStatsHistogram(query bson.M) (data interface{}, err error) {
 	pipeline := mongo2.Pipeline{
 		{{"$match", query}},
 		{{
@@ -317,20 +309,15 @@ func (svc *Service) getTaskStatsHistogram(query bson.M) (data any, err error) {
 	return res, nil
 }
 
-func NewStatsService(opts ...Option) (svc2 interfaces.StatsService, err error) {
+var svc interfaces.StatsService
+
+func GetStatsService() interfaces.StatsService {
+	if svc != nil {
+		return svc
+	}
+
 	// service
-	svc := &Service{}
+	svc = &Service{}
 
-	// apply options
-	for _, opt := range opts {
-		opt(svc)
-	}
-
-	return svc, nil
-}
-
-func ProvideStatsService(opts ...Option) func() (svc interfaces.StatsService, err error) {
-	return func() (svc interfaces.StatsService, err error) {
-		return NewStatsService(opts...)
-	}
+	return svc
 }

@@ -12,7 +12,7 @@ import (
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
 )
 
-func convertTypeTag(d any, err error) (res *models2.Tag, err2 error) {
+func convertTypeTag(d interface{}, err error) (res *models2.Tag, err2 error) {
 	if err != nil {
 		return nil, err
 	}

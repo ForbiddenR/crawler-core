@@ -31,7 +31,7 @@ func TestFilterController_GetColFieldOptions(t *testing.T) {
 	n := 10
 	var ids []primitive.ObjectID
 	var names []string
-	for i := range n {
+	for i := 0; i < n; i++ {
 		_id := primitive.NewObjectID()
 		ids = append(ids, _id)
 		name := fmt.Sprintf("name_%d", i)
@@ -69,7 +69,7 @@ func TestFilterController_GetColFieldOptions(t *testing.T) {
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data").Array().Length().Equal(n)
-	for i := range n {
+	for i := 0; i < n; i++ {
 		res.Path("$.data").Array().Element(i).Object().Value("value").Equal(ids[i])
 		res.Path("$.data").Array().Element(i).Object().Value("label").Equal(names[i])
 	}

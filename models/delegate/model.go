@@ -2,9 +2,6 @@ package delegate
 
 import (
 	"encoding/json"
-	"reflect"
-	"time"
-
 	errors2 "github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/event"
 	"github.com/crawlab-team/crawlab-core/interfaces"
@@ -16,9 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
+	"reflect"
+	"time"
 )
 
-func NewModelDelegate(doc interfaces.Model, args ...any) interfaces.ModelDelegate {
+func NewModelDelegate(doc interfaces.Model, args ...interface{}) interfaces.ModelDelegate {
 	switch doc.(type) {
 	case *models.Artifact:
 		return newModelDelegate(interfaces.ModelIdArtifact, doc, args...)
@@ -48,8 +47,6 @@ func NewModelDelegate(doc interfaces.Model, args ...any) interfaces.ModelDelegat
 		return newModelDelegate(interfaces.ModelIdTaskQueue, doc, args...)
 	case *models.TaskStat:
 		return newModelDelegate(interfaces.ModelIdTaskStat, doc, args...)
-	case *models.Plugin:
-		return newModelDelegate(interfaces.ModelIdPlugin, doc, args...)
 	case *models.SpiderStat:
 		return newModelDelegate(interfaces.ModelIdSpiderStat, doc, args...)
 	case *models.DataSource:
@@ -62,8 +59,6 @@ func NewModelDelegate(doc interfaces.Model, args ...any) interfaces.ModelDelegat
 		return newModelDelegate(interfaces.ModelIdPassword, doc, args...)
 	case *models.ExtraValue:
 		return newModelDelegate(interfaces.ModelIdExtraValue, doc, args...)
-	case *models.PluginStatus:
-		return newModelDelegate(interfaces.ModelIdPluginStatus, doc, args...)
 	case *models.Git:
 		return newModelDelegate(interfaces.ModelIdGit, doc, args...)
 	case *models.Role:
@@ -76,13 +71,15 @@ func NewModelDelegate(doc interfaces.Model, args ...any) interfaces.ModelDelegat
 		return newModelDelegate(interfaces.ModelIdRolePermission, doc, args...)
 	case *models.Environment:
 		return newModelDelegate(interfaces.ModelIdEnvironment, doc, args...)
+	case *models.DependencySetting:
+		return newModelDelegate(interfaces.ModelIdDependencySetting, doc, args...)
 	default:
 		_ = trace.TraceError(errors2.ErrorModelInvalidType)
 		return nil
 	}
 }
 
-func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, args ...any) interfaces.ModelDelegate {
+func newModelDelegate(id interfaces.ModelId, doc interfaces.Model, args ...interface{}) interfaces.ModelDelegate {
 	// user
 	u := utils.GetUserFromArgs(args...)
 
@@ -146,7 +143,7 @@ func (d *ModelDelegate) GetModel() (res interfaces.Model) {
 	return d.doc
 }
 
-func (d *ModelDelegate) ToBytes(m any) (bytes []byte, err error) {
+func (d *ModelDelegate) ToBytes(m interface{}) (bytes []byte, err error) {
 	if m != nil {
 		return utils.JsonToBytes(m)
 	}

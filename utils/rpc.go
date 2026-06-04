@@ -3,7 +3,7 @@ package utils
 import "encoding/json"
 
 // Object 转化为 String
-func ObjectToString(params any) string {
+func ObjectToString(params interface{}) string {
 	bytes, _ := json.Marshal(params)
 	return BytesToString(bytes)
 }

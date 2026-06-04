@@ -16,12 +16,15 @@ func StringArrayContains(arr []string, str string) bool {
 	return false
 }
 
-func GetArrayItems(array any) (res []any, err error) {
+func GetArrayItems(array interface{}) (res []interface{}, err error) {
 	switch reflect.TypeOf(array).Kind() {
 	case reflect.Slice, reflect.Array:
 		s := reflect.ValueOf(array)
 		for i := 0; i < s.Len(); i++ {
-			obj := s.Index(i).Interface()
+			obj, ok := s.Index(i).Interface().(interface{})
+			if !ok {
+				return nil, errors.New("invalid type")
+			}
 			res = append(res, obj)
 		}
 	default:
@@ -30,7 +33,7 @@ func GetArrayItems(array any) (res []any, err error) {
 	return res, nil
 }
 
-func ShuffleArray(slice []any) (err error) {
+func ShuffleArray(slice []interface{}) (err error) {
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	for len(slice) > 0 {
 		n := len(slice)

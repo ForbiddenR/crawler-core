@@ -1,16 +1,15 @@
 package controllers
 
 import (
-	"github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
+	delegate2 "github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/crawlab-team/crawlab-core/models/service"
 	"github.com/crawlab-team/crawlab-core/result"
-	"github.com/crawlab-team/crawlab-core/spider/admin"
 	"github.com/crawlab-team/crawlab-core/task/log"
-	"github.com/crawlab-team/crawlab-core/task/scheduler"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/generic"
 	"github.com/crawlab-team/crawlab-db/mongo"
@@ -18,7 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	mongo2 "go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/dig"
 	"net/http"
 	"strings"
 )
@@ -66,6 +64,13 @@ func (ctr *taskController) Get(c *gin.Context) {
 	ctr.ctx.getWithStatsSpider(c)
 }
 
+func (ctr *taskController) Delete(c *gin.Context) {
+	if err := ctr.ctx._delete(c); err != nil {
+		return
+	}
+	HandleSuccess(c)
+}
+
 func (ctr *taskController) GetList(c *gin.Context) {
 	withStats := c.Query("stats")
 	if withStats == "" {
@@ -75,12 +80,20 @@ func (ctr *taskController) GetList(c *gin.Context) {
 	ctr.ctx.getListWithStats(c)
 }
 
+func (ctr *taskController) DeleteList(c *gin.Context) {
+	if err := ctr.ctx._deleteList(c); err != nil {
+		return
+	}
+	HandleSuccess(c)
+}
+
 type taskContext struct {
-	modelSvc     service.ModelService
-	modelTaskSvc interfaces.ModelBaseService
-	adminSvc     interfaces.SpiderAdminService
-	schedulerSvc interfaces.TaskSchedulerService
-	l            log.Driver
+	modelSvc         service.ModelService
+	modelTaskSvc     interfaces.ModelBaseService
+	modelTaskStatSvc interfaces.ModelBaseService
+	adminSvc         interfaces.SpiderAdminService
+	schedulerSvc     interfaces.TaskSchedulerService
+	l                log.Driver
 }
 
 func (ctx *taskContext) run(c *gin.Context) {
@@ -261,7 +274,8 @@ func (ctx *taskContext) getListWithStats(c *gin.Context) {
 	// ids
 	var ids []primitive.ObjectID
 	for _, d := range list.GetModels() {
-		ids = append(ids, d.GetId())
+		t := d.(interfaces.Model)
+		ids = append(ids, t.GetId())
 	}
 
 	// total count
@@ -290,7 +304,7 @@ func (ctx *taskContext) getListWithStats(c *gin.Context) {
 	}
 
 	// iterate list again
-	var data []any
+	var data []interface{}
 	for _, d := range list.GetModels() {
 		t := d.(*models.Task)
 		s, ok := dict[t.GetId()]
@@ -397,22 +411,83 @@ func (ctx *taskContext) getData(c *gin.Context) {
 	HandleSuccessWithListData(c, data, total)
 }
 
+func (ctx *taskContext) _delete(c *gin.Context) (err error) {
+	id := c.Param("id")
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	if err := mongo.RunTransaction(func(context mongo2.SessionContext) (err error) {
+		// delete task
+		task, err := ctx.modelSvc.GetTaskById(oid)
+		if err != nil {
+			return err
+		}
+		if err := delegate2.NewModelDelegate(task, GetUserFromContext(c)).Delete(); err != nil {
+			return err
+		}
+
+		// delete task stat
+		taskStat, err := ctx.modelSvc.GetTaskStatById(oid)
+		if err != nil {
+			return err
+		}
+		if err := delegate2.NewModelDelegate(taskStat, GetUserFromContext(c)).Delete(); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *taskContext) _deleteList(c *gin.Context) (err error) {
+	payload, err := NewJsonBinder(ControllerIdTask).BindBatchRequestPayload(c)
+	if err != nil {
+		HandleErrorBadRequest(c, err)
+		return
+	}
+
+	if err := mongo.RunTransaction(func(context mongo2.SessionContext) error {
+		// delete tasks
+		if err := ctx.modelTaskSvc.DeleteList(bson.M{
+			"_id": bson.M{
+				"$in": payload.Ids,
+			},
+		}); err != nil {
+			return err
+		}
+
+		// delete task stats
+		if err := ctx.modelTaskStatSvc.DeleteList(bson.M{
+			"_id": bson.M{
+				"$in": payload.Ids,
+			},
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		HandleErrorInternalServerError(c, err)
+		return err
+	}
+
+	return nil
+}
+
 func newTaskContext() *taskContext {
 	// context
 	ctx := &taskContext{}
 
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(service.GetService); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(admin.NewSpiderAdminService); err != nil {
-		panic(err)
-	}
-	if err := c.Provide(scheduler.ProvideGetTaskSchedulerService(config.DefaultConfigPath)); err != nil {
-		panic(err)
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		modelSvc service.ModelService,
 		adminSvc interfaces.SpiderAdminService,
 		schedulerSvc interfaces.TaskSchedulerService,
@@ -427,8 +502,11 @@ func newTaskContext() *taskContext {
 	// model task service
 	ctx.modelTaskSvc = ctx.modelSvc.GetBaseService(interfaces.ModelIdTask)
 
+	// model task stat service
+	ctx.modelTaskStatSvc = ctx.modelSvc.GetBaseService(interfaces.ModelIdTaskStat)
+
 	// log driver
-	l, err := log.GetLogDriver(log.DriverTypeFile, nil)
+	l, err := log.GetLogDriver(log.DriverTypeFile)
 	if err != nil {
 		panic(err)
 	}

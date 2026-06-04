@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeDataSource(d any, err error) (res *models2.DataSource, err2 error) {
+func convertTypeDataSource(d interface{}, err error) (res *models2.DataSource, err2 error) {
 	if err != nil {
 		return nil, err
 	}

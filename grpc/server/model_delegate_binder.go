@@ -2,12 +2,11 @@ package server
 
 import (
 	"encoding/json"
-
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/models"
-	grpc "github.com/crawlab-team/crawlab-grpc"
+	"github.com/crawlab-team/crawlab-grpc"
 )
 
 func NewModelDelegateBinder(req *grpc.Request) (b *ModelDelegateBinder) {
@@ -22,7 +21,7 @@ type ModelDelegateBinder struct {
 	msg interfaces.GrpcModelDelegateMessage
 }
 
-func (b *ModelDelegateBinder) Bind() (res any, err error) {
+func (b *ModelDelegateBinder) Bind() (res interface{}, err error) {
 	if err := b.bindDelegateMessage(); err != nil {
 		return nil, err
 	}
@@ -58,8 +57,6 @@ func (b *ModelDelegateBinder) Bind() (res any, err error) {
 		return b.process(&m.TaskQueueItem)
 	case interfaces.ModelIdTaskStat:
 		return b.process(&m.TaskStat)
-	case interfaces.ModelIdPlugin:
-		return b.process(&m.Plugin)
 	case interfaces.ModelIdSpiderStat:
 		return b.process(&m.SpiderStat)
 	case interfaces.ModelIdDataSource:
@@ -72,8 +69,6 @@ func (b *ModelDelegateBinder) Bind() (res any, err error) {
 		return b.process(&m.Password)
 	case interfaces.ModelIdExtraValue:
 		return b.process(&m.ExtraValue)
-	case interfaces.ModelIdPluginStatus:
-		return b.process(&m.PluginStatus)
 	case interfaces.ModelIdGit:
 		return b.process(&m.Git)
 	case interfaces.ModelIdRole:
@@ -86,12 +81,14 @@ func (b *ModelDelegateBinder) Bind() (res any, err error) {
 		return b.process(&m.RolePermission)
 	case interfaces.ModelIdEnvironment:
 		return b.process(&m.Environment)
+	case interfaces.ModelIdDependencySetting:
+		return b.process(&m.DependencySetting)
 	default:
 		return nil, errors.ErrorModelInvalidModelId
 	}
 }
 
-func (b *ModelDelegateBinder) MustBind() (res any) {
+func (b *ModelDelegateBinder) MustBind() (res interface{}) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)
@@ -99,7 +96,7 @@ func (b *ModelDelegateBinder) MustBind() (res any) {
 	return res
 }
 
-func (b *ModelDelegateBinder) BindWithDelegateMessage() (res any, msg interfaces.GrpcModelDelegateMessage, err error) {
+func (b *ModelDelegateBinder) BindWithDelegateMessage() (res interface{}, msg interfaces.GrpcModelDelegateMessage, err error) {
 	if err := json.Unmarshal(b.req.Data, b.msg); err != nil {
 		return nil, nil, err
 	}
@@ -110,7 +107,7 @@ func (b *ModelDelegateBinder) BindWithDelegateMessage() (res any, msg interfaces
 	return res, b.msg, nil
 }
 
-func (b *ModelDelegateBinder) process(d any, fieldIds ...interfaces.ModelId) (res any, err error) {
+func (b *ModelDelegateBinder) process(d interface{}, fieldIds ...interfaces.ModelId) (res interface{}, err error) {
 	if err := json.Unmarshal(b.msg.GetData(), d); err != nil {
 		return nil, err
 	}

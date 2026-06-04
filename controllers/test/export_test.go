@@ -24,7 +24,7 @@ func TestExportController_Csv(t *testing.T) {
 	col := mongo.GetMongoCol(colName)
 
 	// insert test data to mongo collection
-	for i := range 10 {
+	for i := 0; i < 10; i++ {
 		_, err := col.Insert(bson.M{
 			"field1": i + 1,
 			"field2": i + 2,
@@ -44,7 +44,7 @@ func TestExportController_Csv(t *testing.T) {
 	exportId := res.Path("$.data").String().Raw()
 
 	// poll export with export id
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		res = T.WithAuth(e.GET("/export/csv/" + exportId)).Expect().Status(http.StatusOK).JSON().Object()
 		status := res.Path("$.data.status").String().Raw()
 		if status == constants.TaskStatusFinished {

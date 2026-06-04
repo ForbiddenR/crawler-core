@@ -3,17 +3,16 @@ package apps
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-	"time"
-
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/sys_exec"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/go-trace"
 	"github.com/imroc/req"
 	"github.com/spf13/viper"
+	"os"
+	"os/exec"
+	"strings"
+	"time"
 )
 
 type Docker struct {
@@ -178,13 +177,10 @@ func (app *Docker) importDemo() {
 	_ = utils.ImportDemo()
 }
 
-func NewDocker(opts ...DockerOption) *Docker {
+func NewDocker(svr ServerApp) *Docker {
 	dck := &Docker{
+		parent:        svr,
 		fsLogFilePath: "/var/log/weed.log",
-	}
-
-	for _, opt := range opts {
-		opt(dck)
 	}
 
 	dck.Init()
@@ -194,10 +190,10 @@ func NewDocker(opts ...DockerOption) *Docker {
 
 var dck *Docker
 
-func GetDocker(opts ...DockerOption) *Docker {
+func GetDocker(svr ServerApp) *Docker {
 	if dck != nil {
 		return dck
 	}
-	dck = NewDocker(opts...)
+	dck = NewDocker(svr)
 	return dck
 }
