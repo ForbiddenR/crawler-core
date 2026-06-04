@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeExtraValue(d any, err error) (res *models.ExtraValue, err2 error) {
+func convertTypeExtraValue(d interface{}, err error) (res *models.ExtraValue, err2 error) {
 	if err != nil {
 		return nil, err
 	}

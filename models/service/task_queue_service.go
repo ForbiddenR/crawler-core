@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeTaskQueueItem(d any, err error) (res *models2.TaskQueueItem, err2 error) {
+func convertTypeTaskQueueItem(d interface{}, err error) (res *models2.TaskQueueItem, err2 error) {
 	if err != nil {
 		return nil, err
 	}

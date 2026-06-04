@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypePassword(d any, err error) (res *models2.Password, err2 error) {
+func convertTypePassword(d interface{}, err error) (res *models2.Password, err2 error) {
 	if err != nil {
 		return nil, err
 	}

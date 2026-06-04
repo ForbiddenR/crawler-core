@@ -7,8 +7,6 @@ import (
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/go-trace"
-	"github.com/spf13/viper"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -35,12 +33,12 @@ func (svc *Service) Init() (err error) {
 		if err != nil {
 			return trace.TraceError(err)
 		}
-		if err := ioutil.WriteFile(svc.path, data, os.FileMode(0766)); err != nil {
+		if err := os.WriteFile(svc.path, data, os.FileMode(0766)); err != nil {
 			return trace.TraceError(err)
 		}
 	} else {
 		// exists, read and set to config
-		data, err := ioutil.ReadFile(svc.path)
+		data, err := os.ReadFile(svc.path)
 		if err != nil {
 			return trace.TraceError(err)
 		}
@@ -94,7 +92,7 @@ func (svc *Service) SetConfigPath(path string) {
 	svc.path = path
 }
 
-func NewNodeConfigService(opts ...Option) (svc2 interfaces.NodeConfigService, err error) {
+func NewNodeConfigService() (svc2 interfaces.NodeConfigService, err error) {
 	// cfg
 	cfg := NewConfig(nil)
 
@@ -103,20 +101,8 @@ func NewNodeConfigService(opts ...Option) (svc2 interfaces.NodeConfigService, er
 		cfg: cfg,
 	}
 
-	// apply options
-	for _, opt := range opts {
-		opt(svc)
-	}
-
 	// normalize config path
-	cfgPath := svc.GetConfigPath()
-	if cfgPath == "" || cfgPath == config.DefaultConfigPath {
-		if viper.GetString("config.path") != "" {
-			cfgPath = viper.GetString("config.path")
-		} else {
-			cfgPath = config.DefaultConfigPath
-		}
-	}
+	cfgPath := config.GetConfigPath()
 	svc.SetConfigPath(cfgPath)
 
 	// init
@@ -127,8 +113,18 @@ func NewNodeConfigService(opts ...Option) (svc2 interfaces.NodeConfigService, er
 	return svc, nil
 }
 
-func ProvideConfigService(path string) func() (interfaces.NodeConfigService, error) {
-	return func() (interfaces.NodeConfigService, error) {
-		return NewNodeConfigService(WithConfigPath(path))
+var _service interfaces.NodeConfigService
+
+func GetNodeConfigService() interfaces.NodeConfigService {
+	if _service != nil {
+		return _service
 	}
+
+	var err error
+	_service, err = NewNodeConfigService()
+	if err != nil {
+		panic(err)
+	}
+
+	return _service
 }

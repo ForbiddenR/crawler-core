@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/crawlab-team/crawlab-core/constants"
 	constants2 "github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/entity"
@@ -23,6 +19,9 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strings"
+	"sync"
+	"time"
 )
 
 type ElasticsearchService struct {
@@ -36,7 +35,7 @@ type ElasticsearchService struct {
 	t  time.Time
 }
 
-func (svc *ElasticsearchService) Insert(records ...any) (err error) {
+func (svc *ElasticsearchService) Insert(records ...interface{}) (err error) {
 	// wait group
 	var wg sync.WaitGroup
 	wg.Add(len(records))
@@ -44,7 +43,7 @@ func (svc *ElasticsearchService) Insert(records ...any) (err error) {
 	// iterate records
 	for _, r := range records {
 		// async operation
-		go func(r any) {
+		go func(r interface{}) {
 			switch r.(type) {
 			case entity.Result:
 				// convert type to entity.Result
@@ -98,7 +97,7 @@ func (svc *ElasticsearchService) Insert(records ...any) (err error) {
 	return nil
 }
 
-func (svc *ElasticsearchService) List(query generic.ListQuery, opts *generic.ListOptions) (results []any, err error) {
+func (svc *ElasticsearchService) List(query generic.ListQuery, opts *generic.ListOptions) (results []interface{}, err error) {
 	data, err := svc.getListResponse(query, opts, false)
 	if err != nil {
 		return nil, err

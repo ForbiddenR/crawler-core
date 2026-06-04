@@ -13,7 +13,7 @@ type ColNameBinder struct {
 	id interfaces.ModelId
 }
 
-func (b *ColNameBinder) Bind() (res any, err error) {
+func (b *ColNameBinder) Bind() (res interface{}, err error) {
 	switch b.id {
 	// system models
 	case interfaces.ModelIdArtifact:
@@ -46,8 +46,6 @@ func (b *ColNameBinder) Bind() (res any, err error) {
 		return interfaces.ModelColNameTaskQueue, nil
 	case interfaces.ModelIdTaskStat:
 		return interfaces.ModelColNameTaskStat, nil
-	case interfaces.ModelIdPlugin:
-		return interfaces.ModelColNamePlugin, nil
 	case interfaces.ModelIdSpiderStat:
 		return interfaces.ModelColNameSpiderStat, nil
 	case interfaces.ModelIdDataSource:
@@ -58,8 +56,6 @@ func (b *ColNameBinder) Bind() (res any, err error) {
 		return interfaces.ModelColNamePasswords, nil
 	case interfaces.ModelIdExtraValue:
 		return interfaces.ModelColNameExtraValues, nil
-	case interfaces.ModelIdPluginStatus:
-		return interfaces.ModelColNamePluginStatus, nil
 	case interfaces.ModelIdGit:
 		return interfaces.ModelColNameGit, nil
 	case interfaces.ModelIdRole:
@@ -72,6 +68,8 @@ func (b *ColNameBinder) Bind() (res any, err error) {
 		return interfaces.ModelColNameRolePermission, nil
 	case interfaces.ModelIdEnvironment:
 		return interfaces.ModelColNameEnvironment, nil
+	case interfaces.ModelIdDependencySetting:
+		return interfaces.ModelColNameDependencySetting, nil
 
 	// invalid
 	default:
@@ -79,7 +77,7 @@ func (b *ColNameBinder) Bind() (res any, err error) {
 	}
 }
 
-func (b *ColNameBinder) MustBind() (res any) {
+func (b *ColNameBinder) MustBind() (res interface{}) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)

@@ -3,25 +3,22 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"sync"
-	"time"
-
+	"errors"
 	"github.com/apex/log"
-	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
-	"github.com/crawlab-team/crawlab-core/errors"
-	client2 "github.com/crawlab-team/crawlab-core/grpc/client"
+	"github.com/crawlab-team/crawlab-core/container"
+	errors2 "github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/client"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/service"
-	"github.com/crawlab-team/crawlab-core/node/config"
 	"github.com/crawlab-team/crawlab-core/task"
 	"github.com/crawlab-team/go-trace"
-	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.uber.org/dig"
+	"sync"
+	"time"
 )
 
 type Service struct {
@@ -53,6 +50,11 @@ type Service struct {
 }
 
 func (svc *Service) Start() {
+	// Initialize gRPC if not started
+	if !svc.c.IsStarted() {
+		svc.c.Start()
+	}
+
 	go svc.ReportStatus()
 	go svc.Fetch()
 }
@@ -119,7 +121,7 @@ func (svc *Service) Fetch() {
 		if err := svc.run(tid); err != nil {
 			trace.PrintError(err)
 			t, err := svc.GetTaskById(tid)
-			if err == nil {
+			if err == nil && t.GetStatus() != constants.TaskStatusCancelled {
 				t.SetError(err.Error())
 				_ = svc.SaveTask(t, constants.TaskStatusError)
 				continue
@@ -265,27 +267,54 @@ func (svc *Service) GetSpiderById(id primitive.ObjectID) (s interfaces.Spider, e
 	return s, nil
 }
 
-func (svc *Service) getRunnerCount() (n int) {
+func (svc *Service) getRunners() (runners []*Runner) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
-	svc.runners.Range(func(key, value any) bool {
-		n++
+	svc.runners.Range(func(key, value interface{}) bool {
+		r := value.(Runner)
+		runners = append(runners, &r)
 		return true
 	})
-	return n
+	return runners
+}
+
+func (svc *Service) getRunnerCount() (count int) {
+	n, err := svc.GetCurrentNode()
+	if err != nil {
+		trace.PrintError(err)
+		return
+	}
+	query := bson.M{
+		"node_id": n.GetId(),
+		"status":  constants.TaskStatusRunning,
+	}
+	if svc.cfgSvc.IsMaster() {
+		count, err = svc.modelSvc.GetBaseService(interfaces.ModelIdTask).Count(query)
+		if err != nil {
+			trace.PrintError(err)
+			return
+		}
+	} else {
+		count, err = svc.clientModelTaskSvc.Count(query)
+		if err != nil {
+			trace.PrintError(err)
+			return
+		}
+	}
+	return count
 }
 
 func (svc *Service) getRunner(taskId primitive.ObjectID) (r interfaces.TaskRunner, err error) {
 	log.Debugf("[TaskHandlerService] getRunner: taskId[%v]", taskId)
 	v, ok := svc.runners.Load(taskId)
 	if !ok {
-		return nil, trace.TraceError(errors.ErrorTaskNotExists)
+		return nil, trace.TraceError(errors2.ErrorTaskNotExists)
 	}
 	switch v.(type) {
 	case interfaces.TaskRunner:
 		r = v.(interfaces.TaskRunner)
 	default:
-		return nil, trace.TraceError(errors.ErrorModelInvalidType)
+		return nil, trace.TraceError(errors2.ErrorModelInvalidType)
 	}
 	return r, nil
 }
@@ -337,8 +366,10 @@ func (svc *Service) reportStatus() (err error) {
 		return err
 	}
 
-	// update node
+	// available runners of handler
 	ar := n.GetMaxRunners() - svc.getRunnerCount()
+
+	// set available runners
 	n.SetAvailableRunners(ar)
 
 	// save node
@@ -371,7 +402,7 @@ func (svc *Service) run(taskId primitive.ObjectID) (err error) {
 	// attempt to get runner from pool
 	_, ok := svc.runners.Load(taskId)
 	if ok {
-		return trace.TraceError(errors.ErrorTaskAlreadyExists)
+		return trace.TraceError(errors2.ErrorTaskAlreadyExists)
 	}
 
 	// create a new task runner
@@ -396,10 +427,10 @@ func (svc *Service) run(taskId primitive.ObjectID) (err error) {
 		// run task process (blocking)
 		// error or finish after task runner ends
 		if err := r.Run(); err != nil {
-			switch err {
-			case constants.ErrTaskError:
+			switch {
+			case errors.Is(err, constants.ErrTaskError):
 				log.Errorf("task[%s] finished with error: %v", r.GetTaskId().Hex(), err)
-			case constants.ErrTaskCancelled:
+			case errors.Is(err, constants.ErrTaskCancelled):
 				log.Errorf("task[%s] cancelled", r.GetTaskId().Hex())
 			default:
 				log.Errorf("task[%s] finished with unknown error: %v", r.GetTaskId().Hex(), err)
@@ -411,7 +442,7 @@ func (svc *Service) run(taskId primitive.ObjectID) (err error) {
 	return nil
 }
 
-func NewTaskHandlerService(opts ...Option) (svc2 interfaces.TaskHandlerService, err error) {
+func NewTaskHandlerService() (svc2 interfaces.TaskHandlerService, err error) {
 	// base service
 	baseSvc, err := task.NewBaseService()
 	if err != nil {
@@ -422,7 +453,7 @@ func NewTaskHandlerService(opts ...Option) (svc2 interfaces.TaskHandlerService, 
 	svc := &Service{
 		TaskBaseService:   baseSvc,
 		exitWatchDuration: 60 * time.Second,
-		fetchInterval:     5 * time.Second,
+		fetchInterval:     1 * time.Second,
 		fetchTimeout:      15 * time.Second,
 		reportInterval:    5 * time.Second,
 		cancelTimeout:     5 * time.Second,
@@ -431,41 +462,8 @@ func NewTaskHandlerService(opts ...Option) (svc2 interfaces.TaskHandlerService, 
 		syncLocks:         sync.Map{},
 	}
 
-	// apply options
-	for _, opt := range opts {
-		opt(svc)
-	}
-
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(config.ProvideConfigService(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(service.GetService); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideNodeServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideSpiderServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideTaskServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideTaskStatServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client.ProvideEnvironmentServiceDelegate(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Provide(client2.ProvideGetClient(svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		cfgSvc interfaces.NodeConfigService,
 		modelSvc service.ModelService,
 		clientModelSvc interfaces.GrpcClientModelService,
@@ -494,51 +492,15 @@ func NewTaskHandlerService(opts ...Option) (svc2 interfaces.TaskHandlerService, 
 	return svc, nil
 }
 
-func ProvideTaskHandlerService(path string, opts ...Option) func() (svc interfaces.TaskHandlerService, err error) {
-	// config path
-	opts = append(opts, WithConfigPath(path))
-	return func() (svc interfaces.TaskHandlerService, err error) {
-		return NewTaskHandlerService(opts...)
-	}
-}
+var _service interfaces.TaskHandlerService
 
-var store = sync.Map{}
-
-func GetTaskHandlerService(path string, opts ...Option) (svr interfaces.TaskHandlerService, err error) {
-	if path == "" {
-		path = viper.GetString("config.path")
+func GetTaskHandlerService() (svr interfaces.TaskHandlerService, err error) {
+	if _service != nil {
+		return _service, nil
 	}
-	if path == "" {
-		path = config2.DefaultConfigPath
-	}
-	opts = append(opts, WithConfigPath(path))
-	res, ok := store.Load(path)
-	if ok {
-		svr, ok = res.(interfaces.TaskHandlerService)
-		if ok {
-			return svr, nil
-		}
-	}
-	svr, err = NewTaskHandlerService(opts...)
+	_service, err = NewTaskHandlerService()
 	if err != nil {
 		return nil, err
 	}
-	store.Store(path, svr)
-	return svr, nil
-}
-
-func ProvideGetTaskHandlerService(path string, opts ...Option) func() (svr interfaces.TaskHandlerService, err error) {
-	// report interval
-	reportIntervalSeconds := viper.GetInt("task.handler.reportInterval")
-	if reportIntervalSeconds > 0 {
-		opts = append(opts, WithReportInterval(time.Duration(reportIntervalSeconds)*time.Second))
-	}
-	// cancel timeout
-	cancelTimeoutSeconds := viper.GetInt("task.handler.cancelTimeout")
-	if cancelTimeoutSeconds > 0 {
-		opts = append(opts, WithCancelTimeout(time.Duration(cancelTimeoutSeconds)*time.Second))
-	}
-	return func() (svr interfaces.TaskHandlerService, err error) {
-		return GetTaskHandlerService(path, opts...)
-	}
+	return _service, nil
 }

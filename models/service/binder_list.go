@@ -54,8 +54,6 @@ func (b *ListBinder) Bind() (l interfaces.List, err error) {
 		return b.Process(&m.TaskQueueItems)
 	case interfaces.ModelIdTaskStat:
 		return b.Process(&m.TaskStats)
-	case interfaces.ModelIdPlugin:
-		return b.Process(&m.Plugins)
 	case interfaces.ModelIdSpiderStat:
 		return b.Process(&m.SpiderStats)
 	case interfaces.ModelIdDataSource:
@@ -68,8 +66,6 @@ func (b *ListBinder) Bind() (l interfaces.List, err error) {
 		return b.Process(&m.Passwords)
 	case interfaces.ModelIdExtraValue:
 		return b.Process(&m.ExtraValues)
-	case interfaces.ModelIdPluginStatus:
-		return b.Process(&m.PluginStatus)
 	case interfaces.ModelIdGit:
 		return b.Process(&m.Gits)
 	case interfaces.ModelIdRole:
@@ -82,12 +78,14 @@ func (b *ListBinder) Bind() (l interfaces.List, err error) {
 		return b.Process(&m.RolePermissionList)
 	case interfaces.ModelIdEnvironment:
 		return b.Process(&m.Environments)
+	case interfaces.ModelIdDependencySetting:
+		return b.Process(&m.DependencySettings)
 	default:
 		return l, errors.ErrorModelInvalidModelId
 	}
 }
 
-func (b *ListBinder) Process(d any) (l interfaces.List, err error) {
+func (b *ListBinder) Process(d interface{}) (l interfaces.List, err error) {
 	if err := b.fr.All(d); err != nil {
 		return l, trace.TraceError(err)
 	}

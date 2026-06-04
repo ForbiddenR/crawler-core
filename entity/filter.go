@@ -1,15 +1,14 @@
 package entity
 
 import (
-	"reflect"
-
 	"github.com/crawlab-team/crawlab-core/interfaces"
+	"reflect"
 )
 
 type Condition struct {
-	Key   string `json:"key"`
-	Op    string `json:"op"`
-	Value any    `json:"value"`
+	Key   string      `json:"key"`
+	Op    string      `json:"op"`
+	Value interface{} `json:"value"`
 }
 
 func (c *Condition) GetKey() (key string) {
@@ -28,11 +27,11 @@ func (c *Condition) SetOp(op string) {
 	c.Op = op
 }
 
-func (c *Condition) GetValue() (value any) {
+func (c *Condition) GetValue() (value interface{}) {
 	return c.Value
 }
 
-func (c *Condition) SetValue(value any) {
+func (c *Condition) SetValue(value interface{}) {
 	c.Value = value
 }
 

@@ -24,15 +24,15 @@ func (r *Result) SetId(id primitive.ObjectID) {
 	(*r)["_id"] = id
 }
 
-func (r *Result) Value() map[string]any {
+func (r *Result) Value() map[string]interface{} {
 	return *r
 }
 
-func (r *Result) SetValue(key string, value any) {
+func (r *Result) SetValue(key string, value interface{}) {
 	(*r)[key] = value
 }
 
-func (r *Result) GetValue(key string) (value any) {
+func (r *Result) GetValue(key string) (value interface{}) {
 	return (*r)[key]
 }
 

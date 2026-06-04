@@ -2,11 +2,15 @@ package utils
 
 import "github.com/crawlab-team/crawlab-core/interfaces"
 
-func GetUserFromArgs(args ...any) interfaces.User {
+func GetUserFromArgs(args ...interface{}) (u interfaces.User) {
 	for _, arg := range args {
-		switch t := arg.(type) {
+		switch arg.(type) {
 		case interfaces.User:
-			return t
+			var ok bool
+			u, ok = arg.(interfaces.User)
+			if ok {
+				return u
+			}
 		}
 	}
 	return nil

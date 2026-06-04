@@ -14,10 +14,10 @@ type GrpcBaseServiceParams struct {
 	Doc         interfaces.Model   `json:"d"`
 	Fields      []string           `json:"f"`
 	FindOptions *mongo.FindOptions `json:"o"`
-	Docs        []any              `json:"dl"`
+	Docs        []interface{}      `json:"dl"`
 	User        interfaces.User    `json:"U"`
 }
 
-func (params *GrpcBaseServiceParams) Value() any {
+func (params *GrpcBaseServiceParams) Value() interface{} {
 	return params
 }

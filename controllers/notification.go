@@ -14,11 +14,6 @@ func getNotificationActions() []Action {
 	return []Action{
 		{
 			Method:      http.MethodGet,
-			Path:        "/triggers",
-			HandlerFunc: ctx.GetTriggerList,
-		},
-		{
-			Method:      http.MethodGet,
 			Path:        "/settings",
 			HandlerFunc: ctx.GetSettingList,
 		},
@@ -59,15 +54,6 @@ type notificationContext struct {
 	svc *notification.Service
 }
 
-func (ctx *notificationContext) GetTriggerList(c *gin.Context) {
-	res, total, err := ctx.svc.GetTriggerList()
-	if err != nil {
-		HandleErrorInternalServerError(c, err)
-		return
-	}
-	HandleSuccessWithListData(c, res, total)
-}
-
 func (ctx *notificationContext) GetSettingList(c *gin.Context) {
 	query := MustGetFilterQuery(c)
 	pagination := MustGetPagination(c)
@@ -95,7 +81,7 @@ func (ctx *notificationContext) GetSetting(c *gin.Context) {
 }
 
 func (ctx *notificationContext) PostSetting(c *gin.Context) {
-	var s notification.Setting
+	var s notification.NotificationSetting
 	if err := c.ShouldBindJSON(&s); err != nil {
 		HandleErrorBadRequest(c, err)
 		return
@@ -113,7 +99,7 @@ func (ctx *notificationContext) PutSetting(c *gin.Context) {
 		HandleErrorBadRequest(c, err)
 		return
 	}
-	var s notification.Setting
+	var s notification.NotificationSetting
 	if err := c.ShouldBindJSON(&s); err != nil {
 		HandleErrorBadRequest(c, err)
 		return

@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/models/models"
@@ -15,6 +13,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 func GetElasticsearchClient(ds *models.DataSource) (c *elasticsearch.Client, err error) {
@@ -107,10 +106,10 @@ func getElasticsearchClient(ctx context.Context, ds *models.DataSource) (c *elas
 }
 
 func GetElasticsearchQuery(query generic.ListQuery) (buf *bytes.Buffer) {
-	q := map[string]any{}
+	q := map[string]interface{}{}
 	if len(query) > 0 {
 		match := getElasticsearchQueryMatch(query)
-		q["query"] = map[string]any{
+		q["query"] = map[string]interface{}{
 			"match": match,
 		}
 	}
@@ -122,14 +121,14 @@ func GetElasticsearchQuery(query generic.ListQuery) (buf *bytes.Buffer) {
 }
 
 func GetElasticsearchQueryWithOptions(query generic.ListQuery, opts *generic.ListOptions) (buf *bytes.Buffer) {
-	q := map[string]any{
+	q := map[string]interface{}{
 		"size": opts.Limit,
 		"from": opts.Skip,
 		// TODO: sort
 	}
 	if len(query) > 0 {
 		match := getElasticsearchQueryMatch(query)
-		q["query"] = map[string]any{
+		q["query"] = map[string]interface{}{
 			"match": match,
 		}
 	}
@@ -140,8 +139,8 @@ func GetElasticsearchQueryWithOptions(query generic.ListQuery, opts *generic.Lis
 	return buf
 }
 
-func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]any) {
-	match = map[string]any{}
+func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]interface{}) {
+	match = map[string]interface{}{}
 	for _, c := range query {
 		switch c.Value.(type) {
 		case primitive.ObjectID:
@@ -151,7 +150,7 @@ func getElasticsearchQueryMatch(query generic.ListQuery) (match map[string]any) 
 		case generic.OpEqual:
 			match[c.Key] = c.Value
 		default:
-			match[c.Key] = map[string]any{
+			match[c.Key] = map[string]interface{}{
 				c.Op: c.Value,
 			}
 		}

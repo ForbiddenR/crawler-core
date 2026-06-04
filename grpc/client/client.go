@@ -3,27 +3,22 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"os"
-	"sync"
-	"time"
-
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
-	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/grpc/middlewares"
 	"github.com/crawlab-team/crawlab-core/interfaces"
-	"github.com/crawlab-team/crawlab-core/node/config"
 	"github.com/crawlab-team/crawlab-core/utils"
 	grpc2 "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
 	"github.com/spf13/viper"
-	"go.uber.org/dig"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"io"
+	"time"
 )
 
 type Client struct {
@@ -48,7 +43,6 @@ type Client struct {
 	ModelBaseServiceClient grpc2.ModelBaseServiceClient
 	NodeClient             grpc2.NodeServiceClient
 	TaskClient             grpc2.TaskServiceClient
-	PluginClient           grpc2.PluginServiceClient
 	MessageClient          grpc2.MessageServiceClient
 }
 
@@ -118,9 +112,6 @@ func (c *Client) Register() (err error) {
 	// task
 	c.TaskClient = grpc2.NewTaskServiceClient(c.conn)
 
-	// plugin
-	c.PluginClient = grpc2.NewPluginServiceClient(c.conn)
-
 	// message
 	c.MessageClient = grpc2.NewMessageServiceClient(c.conn)
 
@@ -130,7 +121,6 @@ func (c *Client) Register() (err error) {
 	log.Debugf("[GrpcClient] ModelBaseServiceClient: %v", c.ModelBaseServiceClient)
 	log.Debugf("[GrpcClient] NodeClient: %v", c.NodeClient)
 	log.Debugf("[GrpcClient] TaskClient: %v", c.TaskClient)
-	log.Debugf("[GrpcClient] PluginClient: %v", c.PluginClient)
 	log.Debugf("[GrpcClient] MessageClient: %v", c.MessageClient)
 
 	return nil
@@ -150,10 +140,6 @@ func (c *Client) GetNodeClient() grpc2.NodeServiceClient {
 
 func (c *Client) GetTaskClient() grpc2.TaskServiceClient {
 	return c.TaskClient
-}
-
-func (c *Client) GetPluginClient() grpc2.PluginServiceClient {
-	return c.PluginClient
 }
 
 func (c *Client) GetMessageClient() grpc2.MessageServiceClient {
@@ -180,16 +166,8 @@ func (c *Client) Context() (ctx context.Context, cancel context.CancelFunc) {
 	return context.WithTimeout(context.Background(), c.timeout)
 }
 
-func (c *Client) NewRequest(d any) (req *grpc2.Request) {
+func (c *Client) NewRequest(d interface{}) (req *grpc2.Request) {
 	return &grpc2.Request{
-		NodeKey: c.nodeCfgSvc.GetNodeKey(),
-		Data:    c.getRequestData(d),
-	}
-}
-
-func (c *Client) NewPluginRequest(d any) (req *grpc2.PluginRequest) {
-	return &grpc2.PluginRequest{
-		Name:    os.Getenv("CRAWLAB_PLUGIN_NAME"),
 		NodeKey: c.nodeCfgSvc.GetNodeKey(),
 		Data:    c.getRequestData(d),
 	}
@@ -279,8 +257,6 @@ func (c *Client) subscribe() (err error) {
 	switch c.subscribeType {
 	case constants.GrpcSubscribeTypeNode:
 		op = c._subscribeNode
-	case constants.GrpcSubscribeTypePlugin:
-		op = c._subscribePlugin
 	default:
 		return errors.ErrorGrpcInvalidType
 	}
@@ -293,19 +269,6 @@ func (c *Client) _subscribeNode() (err error) {
 		IsMaster: false,
 	})
 	c.stream, err = c.GetNodeClient().Subscribe(context.Background(), req)
-	if err != nil {
-		return trace.TraceError(err)
-	}
-
-	// log
-	log.Infof("[GrpcClient] grpc client subscribed to remote server")
-
-	return nil
-}
-
-func (c *Client) _subscribePlugin() (err error) {
-	req := c.NewPluginRequest(nil)
-	c.stream, err = c.GetPluginClient().Subscribe(context.Background(), req)
 	if err != nil {
 		return trace.TraceError(err)
 	}
@@ -382,13 +345,13 @@ func (c *Client) needRestart() bool {
 	}
 }
 
-func (c *Client) getRequestData(d any) (data []byte) {
+func (c *Client) getRequestData(d interface{}) (data []byte) {
 	if d == nil {
 		return data
 	}
-	switch d := d.(type) {
+	switch d.(type) {
 	case []byte:
-		data = d
+		data = d.([]byte)
 	default:
 		var err error
 		data, err = json.Marshal(d)
@@ -399,7 +362,7 @@ func (c *Client) getRequestData(d any) (data []byte) {
 	return data
 }
 
-func NewClient(opts ...Option) (res interfaces.GrpcClient, err error) {
+func NewClient() (res interfaces.GrpcClient, err error) {
 	// client
 	client := &Client{
 		address: entity.NewAddress(&entity.AddressOptions{
@@ -412,17 +375,15 @@ func NewClient(opts ...Option) (res interfaces.GrpcClient, err error) {
 		handleMessage: true,
 	}
 
-	// apply options
-	for _, opt := range opts {
-		opt(client)
+	if viper.GetString("grpc.address") != "" {
+		client.address, err = entity.NewAddressFromString(viper.GetString("grpc.address"))
+		if err != nil {
+			return nil, trace.TraceError(err)
+		}
 	}
 
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(config.ProvideConfigService(client.GetConfigPath())); err != nil {
-		return nil, err
-	}
-	if err := c.Invoke(func(nodeCfgSvc interfaces.NodeConfigService) {
+	if err := container.GetContainer().Invoke(func(nodeCfgSvc interfaces.NodeConfigService) {
 		client.nodeCfgSvc = nodeCfgSvc
 	}); err != nil {
 		return nil, err
@@ -436,70 +397,24 @@ func NewClient(opts ...Option) (res interfaces.GrpcClient, err error) {
 	return client, nil
 }
 
-func ProvideClient(path string, opts ...Option) func() (res interfaces.GrpcClient, err error) {
-	if path == "" {
-		path = config2.DefaultConfigPath
+var _client interfaces.GrpcClient
+
+func GetClient() (c interfaces.GrpcClient, err error) {
+	if _client != nil {
+		return _client, nil
 	}
-	opts = append(opts, WithConfigPath(path))
-	return func() (res interfaces.GrpcClient, err error) {
-		return NewClient(opts...)
+	_client, err = createClient()
+	if err != nil {
+		return nil, err
 	}
+	return _client, nil
 }
 
-var clientStore = sync.Map{}
-
-func GetClient(path string, opts ...Option) (c interfaces.GrpcClient, err error) {
-	// normalize path
-	if path == "" {
-		path = config2.DefaultConfigPath
-	}
-
-	log.Debugf("[GetClient] path: %s", path)
-	res, ok := clientStore.Load(path)
-	if !ok {
-		return createClient(path, opts...)
-	}
-	c, ok = res.(interfaces.GrpcClient)
-	if !ok {
-		return createClient(path, opts...)
-	}
-	return c, nil
-}
-
-func ForceGetClient(path string, opts ...Option) (p interfaces.GrpcClient, err error) {
-	return createClient(path, opts...)
-}
-
-func createClient(path string, opts ...Option) (client2 interfaces.GrpcClient, err error) {
-	viperAddress := viper.GetString("grpc.address")
-	if viperAddress != "" {
-		address, err := entity.NewAddressFromString(viperAddress)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, WithAddress(address))
-	}
-
-	viperCfgPath := viper.GetString("config.path")
-	if viperCfgPath != "" {
-		opts = append(opts, WithConfigPath(viperCfgPath))
-	}
-
-	c := dig.New()
-	if err := c.Provide(ProvideClient(path, opts...)); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Invoke(func(client interfaces.GrpcClient) {
+func createClient() (client2 interfaces.GrpcClient, err error) {
+	if err := container.GetContainer().Invoke(func(client interfaces.GrpcClient) {
 		client2 = client
 	}); err != nil {
 		return nil, trace.TraceError(err)
 	}
-	clientStore.Store(path, client2)
 	return client2, nil
-}
-
-func ProvideGetClient(path string, opts ...Option) func() (res interfaces.GrpcClient, err error) {
-	return func() (res interfaces.GrpcClient, err error) {
-		return GetClient(path, opts...)
-	}
 }

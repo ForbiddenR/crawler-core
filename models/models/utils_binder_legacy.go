@@ -1,18 +1,18 @@
 package models
 
-//func AssignFields(d any, fieldIds ...interfaces.ModelId) (res any, err error) {
+//func AssignFields(d interface{}, fieldIds ...interfaces.ModelId) (res interface{}, err error) {
 //	return assignFields(d, fieldIds...)
 //}
 //
-//func AssignListFields(list any, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
+//func AssignListFields(list interface{}, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
 //	return assignListFields(list, fieldIds...)
 //}
 //
-//func AssignListFieldsAsPtr(list any, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
+//func AssignListFieldsAsPtr(list interface{}, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
 //	return assignListFieldsAsPtr(list, fieldIds...)
 //}
 //
-//func assignFields(d any, fieldIds ...interfaces.ModelId) (res any, err error) {
+//func assignFields(d interface{}, fieldIds ...interfaces.ModelId) (res interface{}, err error) {
 //	doc, ok := d.(interfaces.Model)
 //	if !ok {
 //		return nil, errors.ErrorModelInvalidType
@@ -53,7 +53,7 @@ package models
 //	return doc, nil
 //}
 //
-//func _assignListFields(asPtr bool, list any, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
+//func _assignListFields(asPtr bool, list interface{}, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
 //	vList := reflect.ValueOf(list)
 //	if vList.Kind() != reflect.Array &&
 //		vList.Kind() != reflect.Slice {
@@ -61,7 +61,7 @@ package models
 //	}
 //	for i := 0; i < vList.Len(); i++ {
 //		vItem := vList.Index(i)
-//		var item any
+//		var item interface{}
 //		if vItem.CanAddr() {
 //			item = vItem.Addr().Interface()
 //		} else {
@@ -87,10 +87,10 @@ package models
 //	return res, nil
 //}
 //
-//func assignListFields(list any, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
+//func assignListFields(list interface{}, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
 //	return _assignListFields(false, list, fieldIds...)
 //}
 //
-//func assignListFieldsAsPtr(list any, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
+//func assignListFieldsAsPtr(list interface{}, fieldIds ...interfaces.ModelId) (res arraylist.List, err error) {
 //	return _assignListFields(true, list, fieldIds...)
 //}

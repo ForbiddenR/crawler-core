@@ -12,6 +12,6 @@ type NodeInfo struct {
 	MaxRunners  int    `json:"max_runners"`
 }
 
-func (n NodeInfo) Value() any {
+func (n NodeInfo) Value() interface{} {
 	return n
 }

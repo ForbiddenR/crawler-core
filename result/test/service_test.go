@@ -1,10 +1,9 @@
 package test
 
 import (
-	"testing"
-
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestResultService_GetList(t *testing.T) {
@@ -12,7 +11,7 @@ func TestResultService_GetList(t *testing.T) {
 	T.Setup(t)
 
 	n := 1000
-	var docs []any
+	var docs []interface{}
 	for i := 0; i < n; i++ {
 		d := &models.Result{
 			"i": i,
@@ -42,7 +41,7 @@ func TestResultService_Count(t *testing.T) {
 	T.Setup(t)
 
 	n := 1000
-	var docs []any
+	var docs []interface{}
 	for i := 0; i < n; i++ {
 		d := &models.Result{
 			"i": i,

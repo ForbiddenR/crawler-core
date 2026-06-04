@@ -1,9 +1,8 @@
 package interfaces
 
 import (
-	"time"
-
 	"github.com/robfig/cron/v3"
+	"time"
 )
 
 type ScheduleService interface {
@@ -17,8 +16,8 @@ type ScheduleService interface {
 	SetSkip(skip bool)
 	GetUpdateInterval() (interval time.Duration)
 	SetUpdateInterval(interval time.Duration)
-	Enable(s Schedule, args ...any) (err error)
-	Disable(s Schedule, args ...any) (err error)
+	Enable(s Schedule, args ...interface{}) (err error)
+	Disable(s Schedule, args ...interface{}) (err error)
 	Update()
 	GetCron() (c *cron.Cron)
 }

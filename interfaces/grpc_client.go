@@ -2,9 +2,8 @@ package interfaces
 
 import (
 	"context"
-	"time"
-
 	grpc "github.com/crawlab-team/crawlab-grpc"
+	"time"
 )
 
 type GrpcClient interface {
@@ -14,15 +13,13 @@ type GrpcClient interface {
 	GetModelBaseServiceClient() grpc.ModelBaseServiceClient
 	GetNodeClient() grpc.NodeServiceClient
 	GetTaskClient() grpc.TaskServiceClient
-	GetPluginClient() grpc.PluginServiceClient
 	GetMessageClient() grpc.MessageServiceClient
 	SetAddress(Address)
 	SetTimeout(time.Duration)
 	SetSubscribeType(string)
 	SetHandleMessage(bool)
 	Context() (context.Context, context.CancelFunc)
-	NewRequest(any) *grpc.Request
-	NewPluginRequest(any) *grpc.PluginRequest
+	NewRequest(interface{}) *grpc.Request
 	GetMessageChannel() chan *grpc.StreamMessage
 	Restart() error
 	NewModelBaseServiceRequest(ModelId, GrpcBaseServiceParams) (*grpc.Request, error)

@@ -4,36 +4,43 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
-	gclient "github.com/crawlab-team/crawlab-core/grpc/client"
+	fs2 "github.com/crawlab-team/crawlab-core/fs"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/crawlab-team/crawlab-core/models/client"
 	"github.com/crawlab-team/crawlab-core/models/delegate"
 	"github.com/crawlab-team/crawlab-core/models/models"
 	"github.com/crawlab-team/crawlab-core/sys_exec"
-	"github.com/crawlab-team/crawlab-core/task/fs"
+	"github.com/crawlab-team/crawlab-core/utils"
 	"github.com/crawlab-team/crawlab-db/mongo"
 	grpc "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
 	"github.com/shirou/gopsutil/process"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.uber.org/dig"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Runner struct {
 	// dependencies
-	svc   interfaces.TaskHandlerService // task handler service
-	fsSvc interfaces.TaskFsService      // task fs service
+	svc     interfaces.TaskHandlerService // task handler service
+	fsSvc   interfaces.FsServiceV2        // task fs service
+	hookSvc interfaces.TaskHookService    // task hook service
 
 	// settings
 	subscribeTimeout time.Duration
@@ -70,16 +77,26 @@ func (r *Runner) Init() (err error) {
 	}
 
 	// working directory
-	r.cwd = r.fsSvc.GetWorkspacePath()
+	workspacePath := viper.GetString("workspace")
+	r.cwd = filepath.Join(workspacePath, r.s.GetId().Hex())
 
-	// sync files to workspace
-	if err := r.syncFiles(); err != nil {
-		return err
+	// sync files from master
+	if !utils.IsMaster() {
+		if err := r.syncFiles(); err != nil {
+			return err
+		}
 	}
 
 	// grpc task service stream client
 	if err := r.initSub(); err != nil {
 		return err
+	}
+
+	// pre actions
+	if r.hookSvc != nil {
+		if err := r.hookSvc.PreActions(r.t, r.s, r.fsSvc, r.svc); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -147,18 +164,17 @@ func (r *Runner) Run() (err error) {
 		status = constants.TaskStatusError
 	}
 
-	// validate task status
-	if status == "" {
-		return trace.TraceError(errors.ErrorTaskInvalidType)
-	}
-
 	// update task status
 	if err := r.updateTask(status, err); err != nil {
 		return err
 	}
 
-	// dispose
-	_ = r.Dispose()
+	// post actions
+	if r.hookSvc != nil {
+		if err := r.hookSvc.PostActions(r.t, r.s, r.fsSvc, r.svc); err != nil {
+			return err
+		}
+	}
 
 	return err
 }
@@ -167,7 +183,7 @@ func (r *Runner) Cancel() (err error) {
 	// kill process
 	opts := &sys_exec.KillProcessOptions{
 		Timeout: r.svc.GetCancelTimeout(),
-		Force:   false,
+		Force:   true,
 	}
 	if err := sys_exec.KillProcess(r.cmd, opts); err != nil {
 		return err
@@ -190,27 +206,9 @@ func (r *Runner) Cancel() (err error) {
 	return nil
 }
 
-func (r *Runner) Dispose() (err error) {
-	// remove working directory
-	return backoff.Retry(func() error {
-		if err := os.RemoveAll(r.cwd); err != nil {
-			return trace.TraceError(err)
-		}
-		return nil
-	}, backoff.NewExponentialBackOff())
-}
-
 // CleanUp clean up task runner
 func (r *Runner) CleanUp() (err error) {
-	// close fs service
-	fsSvc := r.fsSvc.GetFsService().GetFs()
-	if fsSvc == nil {
-		return
-	}
-	if err = fsSvc.Close(); err != nil {
-		return
-	}
-	return
+	return nil
 }
 
 func (r *Runner) SetSubscribeTimeout(timeout time.Duration) {
@@ -334,6 +332,112 @@ func (r *Runner) configureEnv() {
 	}
 }
 
+func (r *Runner) syncFiles() (err error) {
+	masterURL := fmt.Sprintf("%s/sync/%s", viper.GetString("api.endpoint"), r.s.GetId().Hex())
+	workspacePath := viper.GetString("workspace")
+	workerDir := filepath.Join(workspacePath, r.s.GetId().Hex())
+
+	// get file list from master
+	resp, err := http.Get(masterURL + "/scan")
+	if err != nil {
+		fmt.Println("Error getting file list from master:", err)
+		return trace.TraceError(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return trace.TraceError(err)
+	}
+	var masterFiles map[string]entity.FsFileInfo
+	err = json.Unmarshal(body, &masterFiles)
+	if err != nil {
+		fmt.Println("Error unmarshaling JSON:", err)
+		return trace.TraceError(err)
+	}
+
+	// create a map for master files
+	masterFilesMap := make(map[string]entity.FsFileInfo)
+	for _, file := range masterFiles {
+		masterFilesMap[file.Path] = file
+	}
+
+	// create worker directory if not exists
+	if _, err := os.Stat(workerDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(workerDir, os.ModePerm); err != nil {
+			fmt.Println("Error creating worker directory:", err)
+			return trace.TraceError(err)
+		}
+	}
+
+	// get file list from worker
+	workerFiles, err := utils.ScanDirectory(workerDir)
+	if err != nil {
+		fmt.Println("Error scanning worker directory:", err)
+		return trace.TraceError(err)
+	}
+
+	// set up wait group and error channel
+	var wg sync.WaitGroup
+	errCh := make(chan error, 1)
+
+	// delete files that are deleted on master node
+	for path, workerFile := range workerFiles {
+		if _, exists := masterFilesMap[path]; !exists {
+			fmt.Println("Deleting file:", path)
+			err := os.Remove(workerFile.FullPath)
+			if err != nil {
+				fmt.Println("Error deleting file:", err)
+			}
+		}
+	}
+
+	// download files that are new or modified on master node
+	for path, masterFile := range masterFilesMap {
+		workerFile, exists := workerFiles[path]
+		if !exists || masterFile.Hash != workerFile.Hash {
+			wg.Add(1)
+			go func(path string, masterFile entity.FsFileInfo) {
+				defer wg.Done()
+				logrus.Infof("File needs to be synchronized: %s", path)
+				err := r.downloadFile(masterURL+"/download?path="+path, filepath.Join(workerDir, path))
+				if err != nil {
+					logrus.Errorf("Error downloading file: %v", err)
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
+			}(path, masterFile)
+		}
+	}
+
+	wg.Wait()
+	close(errCh)
+	if err := <-errCh; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Runner) downloadFile(url string, filePath string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
 // wait for process to finish and send task signal (constants.TaskSignal)
 // to task runner's channel (Runner.ch) according to exit code
 func (r *Runner) wait() {
@@ -379,6 +483,9 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 			}
 		}
 
+		// send notification
+		go r.sendNotification()
+
 		// update stats
 		go func() {
 			r._updateTaskStat(status)
@@ -389,22 +496,6 @@ func (r *Runner) updateTask(status string, e error) (err error) {
 	// get task
 	r.t, err = r.svc.GetTaskById(r.tid)
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Runner) syncFiles() (err error) {
-	// skip if files sync is locked
-	if r.svc.IsSyncLocked(r.fsSvc.GetWorkspacePath()) {
-		return
-	}
-
-	// lock files sync
-	r.svc.LockSync(r.fsSvc.GetWorkspacePath())
-	defer r.svc.UnlockSync(r.fsSvc.GetWorkspacePath())
-	if err := r.fsSvc.GetFsService().SyncToWorkspace(); err != nil {
 		return err
 	}
 
@@ -465,6 +556,23 @@ func (r *Runner) _updateTaskStat(status string) {
 			trace.PrintError(err)
 			return
 		}
+	}
+}
+
+func (r *Runner) sendNotification() {
+	data, err := json.Marshal(r.t)
+	if err != nil {
+		trace.PrintError(err)
+		return
+	}
+	req := &grpc.Request{
+		NodeKey: r.svc.GetNodeConfigService().GetNodeKey(),
+		Data:    data,
+	}
+	_, err = r.c.GetTaskClient().SendNotification(context.Background(), req)
+	if err != nil {
+		trace.PrintError(err)
+		return
 	}
 }
 
@@ -559,23 +667,20 @@ func NewTaskRunner(id primitive.ObjectID, svc interfaces.TaskHandlerService, opt
 	}
 
 	// task fs service
-	r.fsSvc, err = fs.NewTaskFsService(r.t.GetId(), r.s.GetId())
-	if err != nil {
-		return nil, err
-	}
+	r.fsSvc = fs2.NewFsServiceV2(filepath.Join(viper.GetString("workspace"), r.s.GetId().Hex()))
 
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(gclient.ProvideGetClient(r.svc.GetConfigPath())); err != nil {
-		return nil, trace.TraceError(err)
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		c interfaces.GrpcClient,
 	) {
 		r.c = c
 	}); err != nil {
 		return nil, trace.TraceError(err)
 	}
+
+	_ = container.GetContainer().Invoke(func(hookSvc interfaces.TaskHookService) {
+		r.hookSvc = hookSvc
+	})
 
 	// initialize task runner
 	if err := r.Init(); err != nil {

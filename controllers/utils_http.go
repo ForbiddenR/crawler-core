@@ -54,7 +54,7 @@ func HandleSuccess(c *gin.Context) {
 	})
 }
 
-func HandleSuccessWithData(c *gin.Context, data any) {
+func HandleSuccessWithData(c *gin.Context, data interface{}) {
 	c.AbortWithStatusJSON(http.StatusOK, entity.Response{
 		Status:  constants.HttpResponseStatusOk,
 		Message: constants.HttpResponseMessageSuccess,
@@ -62,7 +62,7 @@ func HandleSuccessWithData(c *gin.Context, data any) {
 	})
 }
 
-func HandleSuccessWithListData(c *gin.Context, data any, total int) {
+func HandleSuccessWithListData(c *gin.Context, data interface{}, total int) {
 	c.AbortWithStatusJSON(http.StatusOK, entity.ListResponse{
 		Status:  constants.HttpResponseStatusOk,
 		Message: constants.HttpResponseMessageSuccess,

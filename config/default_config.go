@@ -2,10 +2,8 @@ package config
 
 var DefaultConfigYaml = `
 info:
-  version: v0.6.1
+  version: v0.6.3
   edition: global.edition.community
-log:
-  path: ./logs
 mongo:
   host: localhost
   port: 27017
@@ -30,10 +28,13 @@ grpc:
   authKey: Crawlab2021!
 fs:
   filer:
-    // proxy: http://localhost:8888
-    // url: http://localhost:8888/filer
-    url: http://localhost:8888
+    proxy: http://localhost:8888
+    url: http://localhost:8000/filer
     authKey: Crawlab2021!
 node:
   master: Y
+api:
+  endpoint: http://localhost:8000
+log:
+  path: /var/log/crawlab
 `

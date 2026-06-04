@@ -133,7 +133,7 @@ func TestProjectController_GetList(t *testing.T) {
 	n := 100 // total
 	bn := 10 // batch
 
-	for i := range n {
+	for i := 0; i < n; i++ {
 		p := models.Project{
 			Name: fmt.Sprintf("test name %d", i+1),
 		}
@@ -164,7 +164,7 @@ func TestProjectController_GetList(t *testing.T) {
 	res.Path("$.total").Number().Equal(n)
 
 	data := res.Path("$.data").Array()
-	for i := range bn {
+	for i := 0; i < bn; i++ {
 		obj := data.Element(i)
 		obj.Path("$.name").Equal(fmt.Sprintf("test name %d", i+1))
 	}
@@ -177,7 +177,7 @@ func TestProjectController_PostList(t *testing.T) {
 
 	n := 10
 	var docs []models.Project
-	for i := range n {
+	for i := 0; i < n; i++ {
 		docs = append(docs, models.Project{
 			Name:        fmt.Sprintf("project %d", i+1),
 			Description: "this is a project",
@@ -199,7 +199,7 @@ func TestProjectController_DeleteList(t *testing.T) {
 
 	n := 10
 	var docs []models.Project
-	for i := range n {
+	for i := 0; i < n; i++ {
 		docs = append(docs, models.Project{
 			Name:        fmt.Sprintf("project %d", i+1),
 			Description: "this is a project",
@@ -211,7 +211,7 @@ func TestProjectController_DeleteList(t *testing.T) {
 		JSON().Object()
 	var ids []primitive.ObjectID
 	data := res.Path("$.data").Array()
-	for i := range n {
+	for i := 0; i < n; i++ {
 		obj := data.Element(i)
 		id := obj.Path("$._id").String().Raw()
 		oid, err := primitive.ObjectIDFromHex(id)
@@ -245,7 +245,7 @@ func TestProjectController_PutList(t *testing.T) {
 
 	n := 10
 	var docs []models.Project
-	for range n {
+	for i := 0; i < n; i++ {
 		docs = append(docs, models.Project{
 			Name:        "old name",
 			Description: "old description",
@@ -257,7 +257,7 @@ func TestProjectController_PutList(t *testing.T) {
 		JSON().Object()
 	var ids []primitive.ObjectID
 	data := res.Path("$.data").Array()
-	for i := range n {
+	for i := 0; i < n; i++ {
 		obj := data.Element(i)
 		id := obj.Path("$._id").String().Raw()
 		oid, err := primitive.ObjectIDFromHex(id)
@@ -287,7 +287,7 @@ func TestProjectController_PutList(t *testing.T) {
 	T.WithAuth(e.PUT("/projects")).WithJSON(payload).Expect().Status(http.StatusOK)
 
 	// check response data
-	for i := range n {
+	for i := 0; i < n; i++ {
 		res = T.WithAuth(e.GET("/projects/" + ids[i].Hex())).Expect().Status(http.StatusOK).JSON().Object()
 		res.Path("$.data.name").Equal("new name")
 		res.Path("$.data.description").Equal("new description")

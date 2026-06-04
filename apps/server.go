@@ -13,6 +13,10 @@ import (
 	_ "net/http/pprof"
 )
 
+func init() {
+	injectModules()
+}
+
 type Server struct {
 	// settings
 	grpcAddress interfaces.Address
@@ -24,13 +28,16 @@ type Server struct {
 	// modules
 	api *Api
 	dck *Docker
+
+	// internals
+	quit chan int
 }
 
 func (app *Server) SetGrpcAddress(address interfaces.Address) {
 	app.grpcAddress = address
 }
 
-func (app *Server) GetApi() (api *Api) {
+func (app *Server) GetApi() (api ApiApp) {
 	return app.api
 }
 
@@ -70,19 +77,12 @@ func (app *Server) Start() {
 }
 
 func (app *Server) Wait() {
-	// <-app.quit
-	DefaultWait()
+	<-app.quit
 }
 
 func (app *Server) Stop() {
-	if utils.IsMaster() {
-		if utils.IsDocker() {
-			app.dck.Stop()
-		}
-
-		app.api.Stop()
-	}
-	app.nodeSvc.Stop()
+	app.api.Stop()
+	app.quit <- 1
 }
 
 func (app *Server) logNodeInfo() {
@@ -100,15 +100,11 @@ func (app *Server) initPprof() {
 	}
 }
 
-func NewServer(opts ...ServerOption) (app ServerApp) {
+func NewServer() (app NodeApp) {
 	// server
 	svr := &Server{
 		WithConfigPath: config.NewConfigPathService(),
-	}
-
-	// apply options
-	for _, opt := range opts {
-		opt(svr)
+		quit:           make(chan int, 1),
 	}
 
 	// service options
@@ -124,7 +120,7 @@ func NewServer(opts ...ServerOption) (app ServerApp) {
 
 		// docker
 		if utils.IsDocker() {
-			svr.dck = GetDocker(WithDockerParent(svr))
+			svr.dck = GetDocker(svr)
 		}
 	}
 
@@ -142,12 +138,12 @@ func NewServer(opts ...ServerOption) (app ServerApp) {
 	return svr
 }
 
-var server ServerApp
+var server NodeApp
 
-func GetServer(opts ...ServerOption) ServerApp {
+func GetServer() NodeApp {
 	if server != nil {
 		return server
 	}
-	server = NewServer(opts...)
+	server = NewServer()
 	return server
 }

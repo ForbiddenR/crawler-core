@@ -3,26 +3,24 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"go/types"
-	"net"
-	"sync"
-
 	"github.com/apex/log"
 	config2 "github.com/crawlab-team/crawlab-core/config"
 	"github.com/crawlab-team/crawlab-core/constants"
+	"github.com/crawlab-team/crawlab-core/container"
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/errors"
 	"github.com/crawlab-team/crawlab-core/grpc/middlewares"
 	"github.com/crawlab-team/crawlab-core/interfaces"
-	"github.com/crawlab-team/crawlab-core/node/config"
 	grpc2 "github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
-	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/spf13/viper"
-	"go.uber.org/dig"
+	"go/types"
 	"google.golang.org/grpc"
+	"net"
+	"sync"
 )
 
 var subs = sync.Map{}
@@ -32,7 +30,6 @@ type Server struct {
 	nodeCfgSvc          interfaces.NodeConfigService
 	nodeSvr             *NodeServer
 	taskSvr             *TaskServer
-	pluginSvr           *PluginServer
 	messageSvr          *MessageServer
 	modelDelegateSvr    *ModelDelegateServer
 	modelBaseServiceSvr *ModelBaseServiceServer
@@ -110,7 +107,6 @@ func (svr *Server) Register() (err error) {
 	grpc2.RegisterModelBaseServiceServer(svr.svr, *svr.modelBaseServiceSvr) // model base service
 	grpc2.RegisterNodeServiceServer(svr.svr, *svr.nodeSvr)                  // node service
 	grpc2.RegisterTaskServiceServer(svr.svr, *svr.taskSvr)                  // task service
-	grpc2.RegisterPluginServiceServer(svr.svr, *svr.pluginSvr)              // plugin service
 	grpc2.RegisterMessageServiceServer(svr.svr, *svr.messageSvr)            // message service
 
 	return nil
@@ -152,7 +148,7 @@ func (svr *Server) SendStreamMessage(key string, code grpc2.StreamMessageCode) (
 	return svr.SendStreamMessageWithData(key, code, nil)
 }
 
-func (svr *Server) SendStreamMessageWithData(key string, code grpc2.StreamMessageCode, d any) (err error) {
+func (svr *Server) SendStreamMessageWithData(key string, code grpc2.StreamMessageCode, d interface{}) (err error) {
 	var data []byte
 	switch d.(type) {
 	case types.Nil:
@@ -182,67 +178,50 @@ func (svr *Server) IsStopped() (res bool) {
 	return svr.stopped
 }
 
-func (svr *Server) recoveryHandlerFunc(p any) (err error) {
+func (svr *Server) recoveryHandlerFunc(p interface{}) (err error) {
 	err = errors.NewError(errors.ErrorPrefixGrpc, fmt.Sprintf("%v", p))
 	trace.PrintError(err)
 	return err
 }
 
-func NewServer(opts ...Option) (svr2 interfaces.GrpcServer, err error) {
-
+func NewServer() (svr2 interfaces.GrpcServer, err error) {
 	// server
 	svr := &Server{
-		cfgPath: config2.DefaultConfigPath,
+		cfgPath: config2.GetConfigPath(),
 		address: entity.NewAddress(&entity.AddressOptions{
 			Host: constants.DefaultGrpcServerHost,
 			Port: constants.DefaultGrpcServerPort,
 		}),
 	}
 
-	// options
-	for _, opt := range opts {
-		opt(svr)
+	if viper.GetString("grpc.server.address") != "" {
+		svr.address, err = entity.NewAddressFromString(viper.GetString("grpc.server.address"))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// dependency injection
-	c := dig.New()
-	if err := c.Provide(config.ProvideConfigService(svr.GetConfigPath())); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(NewModelDelegateServer); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(NewModelBaseServiceServer); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(ProvideNodeServer(svr)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(ProvideTaskServer(svr)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(ProvidePluginServer(svr)); err != nil {
-		return nil, err
-	}
-	if err := c.Provide(ProvideMessageServer(svr)); err != nil {
-		return nil, err
-	}
-	if err := c.Invoke(func(
+	if err := container.GetContainer().Invoke(func(
 		nodeCfgSvc interfaces.NodeConfigService,
 		modelDelegateSvr *ModelDelegateServer,
 		modelBaseServiceSvr *ModelBaseServiceServer,
 		nodeSvr *NodeServer,
 		taskSvr *TaskServer,
-		pluginSvr *PluginServer,
 		messageSvr *MessageServer,
 	) {
+		// dependencies
 		svr.nodeCfgSvc = nodeCfgSvc
 		svr.modelDelegateSvr = modelDelegateSvr
 		svr.modelBaseServiceSvr = modelBaseServiceSvr
 		svr.nodeSvr = nodeSvr
 		svr.taskSvr = taskSvr
-		svr.pluginSvr = pluginSvr
 		svr.messageSvr = messageSvr
+
+		// server
+		svr.nodeSvr.server = svr
+		svr.taskSvr.server = svr
+		svr.messageSvr.server = svr
 	}); err != nil {
 		return nil, err
 	}
@@ -272,50 +251,15 @@ func NewServer(opts ...Option) (svr2 interfaces.GrpcServer, err error) {
 	return svr, nil
 }
 
-func ProvideServer(path string, opts ...Option) func() (res interfaces.GrpcServer, err error) {
-	if path == "" {
-		path = config2.DefaultConfigPath
-	}
-	opts = append(opts, WithConfigPath(path))
-	return func() (res interfaces.GrpcServer, err error) {
-		return NewServer(opts...)
-	}
-}
+var _server interfaces.GrpcServer
 
-var serverStore = sync.Map{}
-
-func GetServer(path string, opts ...Option) (svr interfaces.GrpcServer, err error) {
-	if path == "" {
-		path = config2.DefaultConfigPath
+func GetServer() (svr interfaces.GrpcServer, err error) {
+	if _server != nil {
+		return _server, nil
 	}
-	opts = append(opts, WithConfigPath(path))
-
-	viperServerAddress := viper.GetString("grpc.server.address")
-	if viperServerAddress != "" {
-		address, err := entity.NewAddressFromString(viperServerAddress)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, WithAddress(address))
-	}
-
-	res, ok := serverStore.Load(path)
-	if ok {
-		svr, ok = res.(interfaces.GrpcServer)
-		if ok {
-			return svr, nil
-		}
-	}
-	svr, err = NewServer(opts...)
+	_server, err = NewServer()
 	if err != nil {
 		return nil, err
 	}
-	serverStore.Store(path, svr)
-	return svr, nil
-}
-
-func ProvideGetServer(path string, opts ...Option) func() (svr interfaces.GrpcServer, err error) {
-	return func() (svr interfaces.GrpcServer, err error) {
-		return GetServer(path, opts...)
-	}
+	return _server, nil
 }

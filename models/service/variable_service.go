@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func convertTypeVariable(d any, err error) (res *models2.Variable, err2 error) {
+func convertTypeVariable(d interface{}, err error) (res *models2.Variable, err2 error) {
 	if err != nil {
 		return nil, err
 	}

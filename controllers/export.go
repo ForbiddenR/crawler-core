@@ -1,14 +1,13 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
-
 	"github.com/crawlab-team/crawlab-core/constants"
 	"github.com/crawlab-team/crawlab-core/export"
 	"github.com/crawlab-team/crawlab-core/interfaces"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 var ExportController ActionController
@@ -52,7 +51,7 @@ func (ctx *exportContext) postExport(c *gin.Context) {
 	case constants.ExportTypeJson:
 		exportId, err = ctx.jsonSvc.Export(exportType, exportTarget, exportFilter)
 	default:
-		HandleErrorBadRequest(c, fmt.Errorf("invalid export type: %s", exportType))
+		HandleErrorBadRequest(c, errors.New(fmt.Sprintf("invalid export type: %s", exportType)))
 		return
 	}
 	if err != nil {
@@ -75,7 +74,7 @@ func (ctx *exportContext) getExport(c *gin.Context) {
 	case constants.ExportTypeJson:
 		exp, err = ctx.jsonSvc.GetExport(exportId)
 	default:
-		HandleErrorBadRequest(c, fmt.Errorf("invalid export type: %s", exportType))
+		HandleErrorBadRequest(c, errors.New(fmt.Sprintf("invalid export type: %s", exportType)))
 	}
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
@@ -97,7 +96,7 @@ func (ctx *exportContext) getExportDownload(c *gin.Context) {
 	case constants.ExportTypeJson:
 		exp, err = ctx.jsonSvc.GetExport(exportId)
 	default:
-		HandleErrorBadRequest(c, fmt.Errorf("invalid export type: %s", exportType))
+		HandleErrorBadRequest(c, errors.New(fmt.Sprintf("invalid export type: %s", exportType)))
 	}
 	if err != nil {
 		HandleErrorInternalServerError(c, err)
@@ -110,10 +109,13 @@ func (ctx *exportContext) getExportDownload(c *gin.Context) {
 	case constants.ExportTypeJson:
 		c.Header("Content-Type", "text/plain")
 	default:
-		HandleErrorBadRequest(c, fmt.Errorf("invalid export type: %s", exportType))
+		HandleErrorBadRequest(c, errors.New(fmt.Sprintf("invalid export type: %s", exportType)))
+	}
+	if err != nil {
+		HandleErrorInternalServerError(c, err)
+		return
 	}
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", exp.GetDownloadPath()))
-	c.Header("Content-Length", strconv.Itoa(len(exp.GetDownloadPath())))
 	c.File(exp.GetDownloadPath())
 }
 

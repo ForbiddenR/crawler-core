@@ -2,10 +2,9 @@ package server
 
 import (
 	"encoding/json"
-
 	"github.com/crawlab-team/crawlab-core/entity"
 	"github.com/crawlab-team/crawlab-core/interfaces"
-	grpc "github.com/crawlab-team/crawlab-grpc"
+	"github.com/crawlab-team/crawlab-grpc"
 	"github.com/crawlab-team/go-trace"
 )
 
@@ -29,7 +28,7 @@ func (b *ModelBaseServiceBinder) Bind() (res *entity.GrpcBaseServiceParams, err 
 	return b.process(params)
 }
 
-func (b *ModelBaseServiceBinder) MustBind() (res any) {
+func (b *ModelBaseServiceBinder) MustBind() (res interface{}) {
 	res, err := b.Bind()
 	if err != nil {
 		panic(err)
