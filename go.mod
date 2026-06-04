@@ -2,7 +2,7 @@ module github.com/crawlab-team/crawlab-core
 
 go 1.26
 
-replace github.com/crawlab-team/crawlab-db => github.com/ForbiddenR/crawlab-db v1.1.0
+replace github.com/crawlab-team/crawlab-db => github.com/ForbiddenR/crawlab-db v1.2.0
 
 require (
 	github.com/ReneKroon/ttlcache v1.7.0
