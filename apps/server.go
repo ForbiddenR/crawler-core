@@ -73,12 +73,19 @@ func (app *Server) Start() {
 }
 
 func (app *Server) Wait() {
-	<-app.quit
+	DefaultWait()
 }
 
 func (app *Server) Stop() {
-	app.api.Stop()
-	app.quit <- 1
+	if utils.IsMaster() {
+		if utils.IsDocker() {
+			app.dck.Stop()
+		}
+
+		app.api.Stop()
+	}
+
+	app.nodeSvc.Stop()
 }
 
 func (app *Server) logNodeInfo() {
