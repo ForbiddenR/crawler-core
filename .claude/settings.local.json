@@ -31,7 +31,8 @@
       "Bash(git -C \"/tmp/crawlab-core-check\" log --oneline --decorate --date=short --pretty=format:'%h %ad %d %s' --all --graph --simplify-by-decoration)",
       "Bash(git -C \"/tmp/crawlab-core-check\" show --no-patch --pretty=format:'commit %H%nparent %P%ndate %ad%nsubject %s' --date=short 5565c51)",
       "Bash(git -C \"/tmp/crawlab-core-check\" show --no-patch --pretty=format:'commit %H%nparent %P%ndate %ad%nsubject %s' --date=short bcde6ab)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(tar -x -C \"/workspace/crawler-core\")"
     ]
   }
 }
