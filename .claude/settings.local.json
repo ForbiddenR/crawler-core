@@ -23,7 +23,15 @@
       "Bash(git ls-remote *)",
       "Bash(gh api *)",
       "Bash(git fetch *)",
-      "Bash(cp *)"
+      "Bash(cp *)",
+      "Bash(grep -E 'refs/tags/v1\\\\.[0-9]+\\\\.[0-9]+\\(\\\\^\\\\{\\\\}\\)?$')",
+      "Bash(rm -rf \"/tmp/crawlab-core-check\")",
+      "Bash(git clone *)",
+      "Bash(git -C \"/tmp/crawlab-core-check\" log --all --oneline --decorate --grep='v2\\\\|version 2\\\\|2.0' -i -n 30)",
+      "Bash(git -C \"/tmp/crawlab-core-check\" log --oneline --decorate --date=short --pretty=format:'%h %ad %d %s' --all --graph --simplify-by-decoration)",
+      "Bash(git -C \"/tmp/crawlab-core-check\" show --no-patch --pretty=format:'commit %H%nparent %P%ndate %ad%nsubject %s' --date=short 5565c51)",
+      "Bash(git -C \"/tmp/crawlab-core-check\" show --no-patch --pretty=format:'commit %H%nparent %P%ndate %ad%nsubject %s' --date=short bcde6ab)",
+      "Bash(git *)"
     ]
   }
 }
