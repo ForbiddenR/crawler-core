@@ -1,9 +1,0 @@
-.idea
-.DS_Store
-vendor/
-tmp/
-build/
-dist/
-*.log
-gen/
-test
