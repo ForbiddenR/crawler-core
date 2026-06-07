@@ -15,13 +15,13 @@ const (
 	DefaultWorkspace                  = "crawlab_workspace"
 	DefaultTaskLogPath                = "/var/log/crawlab/tasks"
 	DefaultServerHost                 = "0.0.0.0"
-	DefaultServerPort                 = 8000
+	DefaultServerPort                 = 8080
 	DefaultGrpcHost                   = "localhost"
 	DefaultGrpcPort                   = 9666
 	DefaultGrpcServerHost             = "0.0.0.0"
 	DefaultGrpcServerPort             = 9666
 	DefaultAuthKey                    = "Crawlab2024!"
-	DefaultApiEndpoint                = "http://localhost:8000"
+	DefaultApiEndpoint                = "http://localhost:8080/api"
 	DefaultApiAllowOrigin             = "*"
 	DefaultApiAllowCredentials        = "true"
 	DefaultApiAllowMethods            = "DELETE, POST, OPTIONS, GET, PUT"

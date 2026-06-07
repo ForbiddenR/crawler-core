@@ -7,6 +7,7 @@ import (
 	"github.com/crawlab-team/crawlab/core/interfaces"
 	"github.com/crawlab-team/crawlab/core/middlewares"
 	"github.com/crawlab-team/crawlab/core/utils"
+	"github.com/crawlab-team/crawlab/core/web"
 	"github.com/gin-gonic/gin"
 	"net"
 	"net/http"
@@ -39,6 +40,9 @@ func (app *Api) Init() {
 
 	// initialize routes
 	_ = app.initModuleWithApp("routes", controllers.InitRoutes)
+
+	// serve the embedded web UI for non-API routes (no-op without the "embed_ui" tag)
+	web.Register(app.app)
 
 	// set initialized
 	app.initialized = true

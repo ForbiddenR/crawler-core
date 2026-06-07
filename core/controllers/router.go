@@ -38,10 +38,14 @@ func NewRouterGroups(app *gin.Engine) (groups *RouterGroups) {
 
 	f := globalWrapper.GetFizz()
 
+	// All API routes are served under the API base path (default "/api") so that Gin
+	// can serve the embedded web UI on the remaining routes (see core/web). This base
+	// path matches what GetApiEndpoint() appends, keeping inter-node sync consistent.
+	apiBasePath := utils.GetApiPath()
 	return &RouterGroups{
-		AuthGroup:      f.Group("/", "AuthGroup", "Router group that requires authentication", middlewares.AuthorizationMiddleware()),
-		AnonymousGroup: f.Group("/", "AnonymousGroup", "Router group that doesn't require authentication"),
-		SyncAuthGroup:  f.Group("/", "SyncAuthGroup", "Router group for sync operations with special auth", middlewares.SyncAuthorizationMiddleware()),
+		AuthGroup:      f.Group(apiBasePath, "AuthGroup", "Router group that requires authentication", middlewares.AuthorizationMiddleware()),
+		AnonymousGroup: f.Group(apiBasePath, "AnonymousGroup", "Router group that doesn't require authentication"),
+		SyncAuthGroup:  f.Group(apiBasePath, "SyncAuthGroup", "Router group for sync operations with special auth", middlewares.SyncAuthorizationMiddleware()),
 		Wrapper:        globalWrapper,
 	}
 }
@@ -728,6 +732,10 @@ func InitRoutes(app *gin.Engine) (err error) {
 
 	// Register OpenAPI documentation route
 	groups.AnonymousGroup.GinRouterGroup().GET("/openapi.json", GetOpenAPI)
+
+	// Also expose a root-level health endpoint (outside the API base path) so external
+	// liveness probes keep working regardless of the configured API path prefix.
+	app.GET("/health", GetHealthFn(func() bool { return true }))
 
 	return nil
 }
