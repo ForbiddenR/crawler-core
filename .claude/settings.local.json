@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(git ls-remote *)",
+      "Bash([ -e \"$dest\" ])",
+      "Bash(printf 'Destination already exists: %s\\\\n' /workspace/crawlab-core-25ed70356f13)",
+      "Bash(exit 1)",
+      "Bash(mkdir /workspace/crawlab-core-25ed70356f13)",
+      "Bash(git archive *)"
+    ]
+  }
+}
