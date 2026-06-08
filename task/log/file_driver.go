@@ -215,6 +215,9 @@ func newFileLogDriver(options *FileLogDriverOptions) (driver Driver, err error) 
 	// normalize BaseDir
 	baseDir := options.BaseDir
 	if baseDir == "" {
+		baseDir = viper.GetString("log.path")
+	}
+	if baseDir == "" {
 		baseDir = "/var/log/crawlab"
 	}
 	options.BaseDir = baseDir
