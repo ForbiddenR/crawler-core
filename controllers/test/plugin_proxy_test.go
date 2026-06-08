@@ -47,7 +47,7 @@ func TestPluginProxyController_Http(t *testing.T) {
 	go svr.ListenAndServe()
 	time.Sleep(1 * time.Second)
 
-	req := T.WithAuth(e.POST("/plugin-proxy/test-plugin").WithJSON(p))
+	req := T.WithAuth(e.POST("/api/plugin-proxy/test-plugin").WithJSON(p))
 	res := req.Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data.p").NotNull()
@@ -56,7 +56,7 @@ func TestPluginProxyController_Http(t *testing.T) {
 	res.Path("$.data.p.endpoint").Equal("http://localhost:19999")
 	require.Nil(t, err)
 
-	req = T.WithAuth(e.POST("/plugin-proxy/test-plugin/test-path").WithJSON(p))
+	req = T.WithAuth(e.POST("/api/plugin-proxy/test-plugin/test-path").WithJSON(p))
 	res = req.Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data.path").Equal("/test-path")
 	require.Nil(t, err)

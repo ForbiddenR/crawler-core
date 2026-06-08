@@ -1,6 +1,6 @@
 module github.com/crawlab-team/crawlab-core
 
-go 1.18
+go 1.26
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0

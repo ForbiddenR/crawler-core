@@ -14,6 +14,8 @@ mongo:
 server:
   host: 0.0.0.0
   port: 8000
+web:
+  embedded: true
 spider:
   fs: "/spiders"
   workspace: "/workspace"
@@ -29,7 +31,7 @@ grpc:
 fs:
   filer:
     proxy: http://localhost:8888
-    url: http://localhost:8000/filer
+    url: http://localhost:8000/api/filer
     authKey: Crawlab2021!
 node:
   master: Y

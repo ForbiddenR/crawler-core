@@ -50,7 +50,7 @@ func (t *Test) Cleanup() {
 
 func (t *Test) NewExpect(t2 *testing.T) (e *httpexpect.Expect) {
 	e = httpexpect.New(t2, t.svr.URL)
-	res := e.POST("/login").WithJSON(map[string]string{
+	res := e.POST("/api/login").WithJSON(map[string]string{
 		"username": t.TestUsername,
 		"password": t.TestPassword,
 	}).Expect().JSON().Object()

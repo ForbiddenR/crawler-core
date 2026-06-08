@@ -3,6 +3,7 @@
 vendor/
 tmp/
 build/
-dist/
+/dist/
 *.log
 gen/
+.claude/

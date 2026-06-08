@@ -36,16 +36,25 @@ func (app *Docker) Init() {
 		trace.PrintError(err)
 	}
 
-	// replace paths
-	if err := app.replacePaths(); err != nil {
-		panic(err)
-	}
+	if !app.embeddedWebEnabled() {
+		// replace paths
+		if err := app.replacePaths(); err != nil {
+			panic(err)
+		}
 
-	// start nginx
-	go app.startNginx()
+		// start nginx
+		go app.startNginx()
+	}
 
 	// start seaweedfs
 	go app.startSeaweedFs()
+}
+
+func (app *Docker) embeddedWebEnabled() bool {
+	if !viper.IsSet("web.embedded") {
+		return true
+	}
+	return viper.GetBool("web.embedded")
 }
 
 func (app *Docker) Start() {

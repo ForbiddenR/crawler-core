@@ -45,7 +45,7 @@ type filerContext struct {
 
 func (ctx *filerContext) do(c *gin.Context) {
 	// request path
-	requestPath := strings.Replace(c.Request.URL.Path, "/filer", "", 1)
+	requestPath := strings.TrimPrefix(c.Request.URL.Path, "/api/filer")
 
 	// request url
 	requestUrl := fmt.Sprintf("%s%s", ctx.endpoint, requestPath)

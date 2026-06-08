@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/apex/log"
 	"github.com/crawlab-team/crawlab-core/controllers"
+	"github.com/crawlab-team/crawlab-core/web"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"path"
+	"strings"
 )
 
 type RouterServiceInterface interface {
@@ -89,6 +91,33 @@ func InitRoutes(app *gin.Engine) (err error) {
 	registerRoutesAnonymousGroup(svc, groups)
 	registerRoutesAuthGroup(svc, groups)
 	registerRoutesFilterGroup(svc, groups)
+
+	// web routes
+	if err := registerRoutesWeb(app); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func registerRoutesWeb(app *gin.Engine) (err error) {
+	spaHandler, err := web.NewSPAHandler(web.StaticAssets)
+	if err != nil {
+		return err
+	}
+
+	app.NoRoute(func(c *gin.Context) {
+		if c.Request.URL.Path == "/api" || strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"status":  "ok",
+				"message": "error",
+				"error":   "api endpoint not found",
+			})
+			return
+		}
+
+		spaHandler.ServeHTTP(c.Writer, c.Request)
+	})
 
 	return nil
 }

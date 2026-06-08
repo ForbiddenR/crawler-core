@@ -41,14 +41,14 @@ func TestFilterController_GetColFieldOptions(t *testing.T) {
 	}
 
 	// validate filter options field 1
-	res := T.WithAuth(e.GET(fmt.Sprintf("/filters/%s/%s/%s", colName, field1, field1))).
+	res := T.WithAuth(e.GET(fmt.Sprintf("/api/filters/%s/%s/%s", colName, field1, field1))).
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data").Array().Length().Equal(1)
 	res.Path("$.data").Array().Element(0).Path("$.value").Equal(value1)
 
 	// validate filter options field 2
-	res = T.WithAuth(e.GET(fmt.Sprintf("/filters/%s/%s/%s", colName, field2, field2))).
+	res = T.WithAuth(e.GET(fmt.Sprintf("/api/filters/%s/%s/%s", colName, field2, field2))).
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data").Array().Length().Equal(2)
@@ -58,14 +58,14 @@ func TestFilterController_GetColFieldOptions(t *testing.T) {
 	conditionsJson, err := json.Marshal(conditions)
 	conditionsJsonStr := string(conditionsJson)
 	require.Nil(t, err)
-	res = T.WithAuth(e.GET(fmt.Sprintf("/filters/%s/%s/%s", colName, field2, field2))).
+	res = T.WithAuth(e.GET(fmt.Sprintf("/api/filters/%s/%s/%s", colName, field2, field2))).
 		WithQuery(constants.FilterQueryFieldConditions, conditionsJsonStr).
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data").Array().Length().Equal(1)
 
 	// validate filter options (basic path)
-	res = T.WithAuth(e.GET(fmt.Sprintf("/filters/%s", colName))).
+	res = T.WithAuth(e.GET(fmt.Sprintf("/api/filters/%s", colName))).
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
 	res.Path("$.data").Array().Length().Equal(n)

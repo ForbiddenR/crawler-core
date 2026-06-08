@@ -35,7 +35,7 @@ func TestExportController_Csv(t *testing.T) {
 	}
 
 	// export from mongo collection
-	res := T.WithAuth(e.POST("/export/csv")).
+	res := T.WithAuth(e.POST("/api/export/csv")).
 		WithQuery("target", colName).
 		Expect().Status(http.StatusOK).JSON().Object()
 	res.Path("$.data").NotNull()
@@ -45,7 +45,7 @@ func TestExportController_Csv(t *testing.T) {
 
 	// poll export with export id
 	for i := 0; i < 10; i++ {
-		res = T.WithAuth(e.GET("/export/csv/" + exportId)).Expect().Status(http.StatusOK).JSON().Object()
+		res = T.WithAuth(e.GET("/api/export/csv/" + exportId)).Expect().Status(http.StatusOK).JSON().Object()
 		status := res.Path("$.data.status").String().Raw()
 		if status == constants.TaskStatusFinished {
 			break
@@ -54,6 +54,6 @@ func TestExportController_Csv(t *testing.T) {
 	}
 
 	// download exported csv file
-	csvFileBody := T.WithAuth(e.GET("/export/csv/" + exportId + "/download")).Expect().Status(http.StatusOK).Body()
+	csvFileBody := T.WithAuth(e.GET("/api/export/csv/" + exportId + "/download")).Expect().Status(http.StatusOK).Body()
 	csvFileBody.NotEmpty()
 }
