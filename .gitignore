@@ -7,3 +7,5 @@ build/
 *.log
 gen/
 .claude/
+seaweedfs-data
+crawlab
