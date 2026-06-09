@@ -6,7 +6,7 @@ build/
 /dist/
 *.log
 gen/
-.claude
+.claude/
 seaweedfs-data
 crawlab
 clogs/
