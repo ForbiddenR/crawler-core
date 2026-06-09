@@ -127,6 +127,8 @@ func (svr TaskServer) handleInsertData(msg *grpc.StreamMessage) (err error) {
 					d[constants.TaskKey] = id
 				}
 			}
+		} else {
+			d[constants.TaskKey] = data.TaskId
 		}
 		records = append(records, d)
 	}

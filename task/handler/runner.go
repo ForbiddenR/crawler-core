@@ -288,7 +288,10 @@ func (r *Runner) startLoggingReaderStdout() {
 		if err != nil {
 			break
 		}
-		line = strings.TrimSuffix(line, "\n")
+		line = strings.TrimRight(line, "\n\r")
+		if r.handleIPCLine(line) {
+			continue
+		}
 		r.writeLogLines([]string{line})
 	}
 }
